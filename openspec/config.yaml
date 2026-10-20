@@ -1,0 +1,16 @@
+schema: spec-driven
+
+context: |
+  naive-support-agent helps an organization's support staff investigate customer cases: it reads the
+  organization's data, logs and code and answers the support person in a chat. It is published as
+  open source, so nothing in the repository names a particular organization, product, person, chat,
+  database table or customer. Everything an installation knows about its own product (how to
+  investigate, where data lives, typical failures, compensation rules, the tone of answers) comes
+  from the installation's instructions, not from the code. A vendor may be named only in the
+  development environment and in README examples. One installation serves one organization.
+
+  Write the prose of every artifact (proposal.md, design.md, tasks.md, requirement and scenario text
+  in delta specs) in Russian. Folder names, capability paths, identifiers and the OpenSpec keywords
+  (SHALL, WHEN, THEN, section headings the CLI validates) stay English. Code, comments, commit
+  messages, log and error strings are English. Examples use invented data only
+  (client@example.com, round amounts).
