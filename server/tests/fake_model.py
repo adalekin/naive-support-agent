@@ -28,9 +28,11 @@ class FakeModel:
     def __init__(self, *replies: dict[str, Any]) -> None:
         self.replies = list(replies)
         self.requests: list[dict[str, Any]] = []
+        self.betas: list[str] = []
 
     def _handle(self, request: httpx2.Request) -> httpx2.Response:
         self.requests.append(json.loads(request.content))
+        self.betas.append(request.headers.get("anthropic-beta", ""))
         return httpx2.Response(200, json=self.replies.pop(0))
 
     def client(self) -> AsyncAnthropic:

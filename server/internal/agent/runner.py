@@ -15,6 +15,10 @@ from internal.sources.base import SourceGateway, ToolSpec
 MAX_TOKENS = 16000
 #: The server re-runs a declined request on a fallback model chosen by the kind of decline.
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
+#: The server summarises a long conversation in place of its history.
+COMPACTION_BETA = "compact-2026-09-04"
+#: A request of a turn this large has the conversation compacted once the model's turn is over.
+COMPACT_AT_TOKENS = 150_000
 
 
 @dataclass(frozen=True)
@@ -37,13 +41,20 @@ class CaseAgent:
     """
 
     def __init__(
-        self, client: AsyncAnthropic, model: str, effort: str, token_budget: int, system: list[dict[str, Any]]
+        self,
+        client: AsyncAnthropic,
+        model: str,
+        effort: str,
+        token_budget: int,
+        system: list[dict[str, Any]],
+        compact_at: int = COMPACT_AT_TOKENS,
     ) -> None:
         self._client = client
         self._model = model
         self._effort = effort
         self._budget = token_budget
         self._system = system
+        self._compact_at = compact_at
 
     async def run(
         self,
@@ -67,7 +78,7 @@ class CaseAgent:
             thinking={"type": "adaptive"},
             output_config={"effort": self._effort},
             fallbacks="default",
-            betas=[FALLBACK_BETA],
+            betas=[FALLBACK_BETA, COMPACTION_BETA],
             # The cache point moves to the end of the conversation with every request: the next
             # request of the turn, and the next turn of the case within the cache's lifetime, read
             # the history from the cache instead of paying for it again.
@@ -77,15 +88,27 @@ class CaseAgent:
         spent_in = spent_out = cache_read = cache_write = 0
         failure: str | None = None
         last = None
+        compacting = False
         async for message in runner:
-            last = message
-            history.append({"role": "assistant", "content": [_block(block) for block in message.content]})
             usage = message.usage
+            request_in = (usage.input_tokens or 0) + (usage.cache_read_input_tokens or 0)
+            request_in += usage.cache_creation_input_tokens or 0
             cache_read += usage.cache_read_input_tokens or 0
             cache_write += usage.cache_creation_input_tokens or 0
-            spent_in += (usage.input_tokens or 0) + (usage.cache_read_input_tokens or 0)
-            spent_in += usage.cache_creation_input_tokens or 0
+            spent_in += request_in
             spent_out += usage.output_tokens or 0
+
+            content = {"role": "assistant", "content": [_block(block) for block in message.content]}
+            if message.stop_reason == "compaction":
+                # The summary takes the place of the whole history, on the server and here alike.
+                history = [content]
+                compacting = False
+                continue
+            last = message
+            history.append(content)
+            if request_in > self._compact_at and not compacting:
+                runner.compact_before_next_turn()
+                compacting = True
 
             if spent_in + spent_out > self._budget:
                 failure = "the token budget of the case ran out"

@@ -191,3 +191,32 @@ def test_interface_rules_follow_the_installation():
     )
     assert "https://app.example.com" in system_prompt(with_interface)[1]["text"]
     assert "cannot open the product's interface" in system_prompt(INSTRUCTIONS)[1]["text"]
+
+
+async def test_a_long_conversation_is_compacted_and_the_summary_replaces_the_history(database, setup):
+    _, registry = setup
+    reply_answer = {**ANSWER, "kind": "reply", "text": "ok"}
+    reply_answer.update(dict.fromkeys(["client_saw", "cause", "whose_error", "tell_client_now", "next_steps"]))
+    summary = {
+        "id": "msg_c",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-opus-5-5",
+        "content": [{"type": "compaction", "content": "The client was charged; the order was not delivered."}],
+        "stop_reason": "compaction",
+        "stop_sequence": None,
+        "usage": {"input_tokens": 1000, "output_tokens": 100},
+    }
+    model = FakeModel(
+        reply(tool_use("db__query", {"sql": "select 1"}), input_tokens=200_000),
+        summary,
+        reply(tool_use("submit_answer", reply_answer)),
+        reply({"type": "text", "text": ""}, stop_reason="end_turn"),
+    )
+    context, outcome = await run_turn(database, registry, model, "a long case", budget=1_000_000)
+    assert outcome.failure is None and context.answer.text == "ok"
+    assert model.requests[1].get("compaction") == {"type": "summarize"}
+    conversation = context.case.conversation
+    assert conversation[0]["content"][0]["type"] == "compaction"
+    assert "a long case" not in json.dumps(conversation)
+    assert "compact-2026-09-04" in model.betas[0]
