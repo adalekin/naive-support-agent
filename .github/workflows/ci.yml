@@ -32,7 +32,16 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
       # The tests take frames out of a video and keep a clone of a repository.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg git
+      # Packages come from the Yandex mirror.
+      - run: |
+          for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do
+            if [ -f "$f" ]; then
+              sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#http://mirror.yandex.ru/ubuntu/#g' "$f"
+            fi
+          done
+          grep -rq mirror.yandex.ru /etc/apt/sources.list /etc/apt/sources.list.d/
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg git
       - run: uv sync --python 3.12 --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .

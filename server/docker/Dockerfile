@@ -18,7 +18,9 @@ COPY migrations ./migrations
 FROM python:3.12-slim
 
 # git keeps the clone of the code; ffmpeg takes frames out of the videos clients send.
-RUN apt-get update \
+# Packages come from the Yandex mirror.
+RUN sed -i 's#http://deb.debian.org/#http://mirror.yandex.ru/#' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends git ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
