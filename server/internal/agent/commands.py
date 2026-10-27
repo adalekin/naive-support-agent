@@ -17,7 +17,7 @@ from internal.agent.answer import SUBMIT_ANSWER_SCHEMA, Answer
 from internal.agent.tools import Refused, RunnableTool, nullable, strict_object
 from internal.bot.outbox import Outbox, Send
 from internal.db import Database
-from internal.entity import Case, CaseState, JournalEntry, JournalKind
+from internal.entity import Case, CaseState, Incident, JournalEntry, JournalKind
 from internal.privacy.pseudonymizer import LabelMap
 from internal.privacy.render import TextBuilder
 from internal.repository import CaseRepository, IncidentRepository, Journal
@@ -176,9 +176,25 @@ class CaseCommands:
         waiting_for = (data.get("waiting_for") or "").strip() or None
         if state is CaseState.WAITING_FIX and waiting_for is None:
             raise Refused("waiting_fix needs waiting_for: which fix the case waits for.")
+        if state is CaseState.WAITING_OWNER and not await self._owner_called():
+            raise Refused(
+                "No responsible person was called about this case: waiting_owner is only for a case a call went out "
+                "for. Tell the person who asked that the call did not go through."
+            )
         self.context.case.state = state
         self.context.case.waiting_for = waiting_for
         return f"The case is now {state.value}."
+
+    async def _owner_called(self) -> bool:
+        """A call went out in this turn, earlier in the case, or for the incident the case belongs to."""
+        case = self.context.case
+        if self.context.escalated or case.state is CaseState.WAITING_OWNER:
+            return True
+        if case.incident_id is None:
+            return False
+        async with self.context.database.unit_of_work() as session:
+            incident = await session.get(Incident, case.incident_id)
+        return incident is not None and incident.escalated_at is not None
 
     async def identify_client(self, data: dict[str, Any]) -> str:
         case = self.context.case

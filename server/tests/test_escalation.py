@@ -111,3 +111,15 @@ async def test_rule_is_offered_to_the_responsible_person_and_instructions_stay(d
     bot.telegram.message(GROUP, OLEG, "refund in full", reply_to_message=bot.telegram.in_thread(asked))
     await bot.step()
     assert "A charge without a result is refunded in full." in bot.telegram.texts(OLEG)[-1]
+
+
+async def test_a_case_does_not_wait_for_a_responsible_person_nobody_called(database, httpx_mock, model):
+    from internal.entity import Case, CaseState
+
+    bot = await harness(database, httpx_mock, model, owners=False)
+    model.replies += escalating()
+    bot.telegram.message(GROUP, ANNA, "@assistant_test_bot refund client@example.com?")
+    await bot.step()
+    async with database.unit_of_work() as session:
+        assert (await session.scalar(select(Case))).state is CaseState.INVESTIGATING
+    assert "waiting_owner is only for a case a call went out for" in str(model.requests)

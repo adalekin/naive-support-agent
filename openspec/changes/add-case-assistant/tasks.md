@@ -4,7 +4,7 @@
 
 - [x] 1.1 `server/` с `pyproject.toml` (Python 3.12, `uv`, `ruff`, `pytest`, `pytest-asyncio`, `pytest-httpx`), пустой пакет `internal/` и `uv.lock`. Проверка: `uv run ruff check .` и `uv run pytest` проходят.
 - [x] 1.2 `compose.yaml` для разработки: PostgreSQL и провайдер OpenID Connect с тестовым realm, клиентом с входом по коду устройства и ролями `support` и `owner`, два тестовых пользователя. Проверка: `docker compose up -d`, запрос кода устройства к провайдеру отвечает 200.
-- [ ] 1.3 `.github/workflows/ci.yml`: `ruff check`, `ruff format --check`, `pytest` с PostgreSQL, `openspec validate --all --strict`. Проверка: прогон на ветке зелёный.
+- [x] 1.3 `.github/workflows/ci.yml`: `ruff check`, `ruff format --check`, `pytest` с PostgreSQL, `openspec validate --all --strict`. Проверка: прогон на ветке зелёный.
 - [x] 1.4 `Dockerfile` сервиса. Проверка: образ собирается, контейнер без настроек завершается с ошибкой о недостающих настройках.
 
 ## 2. Настройки и инструкции установки
