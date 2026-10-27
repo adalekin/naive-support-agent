@@ -34,12 +34,17 @@ jobs:
       # The tests take frames out of a video and keep a clone of a repository.
       # Packages come from the Yandex mirror.
       - run: |
+          # The runner image takes its mirrors from this list: it is replaced as a whole.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            echo "http://mirror.yandex.ru/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt
+          fi
           for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do
             if [ -f "$f" ]; then
               sudo sed -i -E 's#https?://[a-z.]*(archive|security)\.ubuntu\.com/ubuntu/?#http://mirror.yandex.ru/ubuntu/#g' "$f"
             fi
           done
-          grep -rq mirror.yandex.ru /etc/apt/sources.list /etc/apt/sources.list.d/
+          grep -rh "^URIs\|^deb " /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null | sort -u
+          grep -rqs mirror.yandex.ru /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg git
       - run: uv sync --python 3.12 --frozen
