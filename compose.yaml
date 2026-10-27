@@ -1,0 +1,58 @@
+# Development environment: `docker compose up -d` from the repository root.
+#
+#   provider   http://keycloak.localhost:8086, realm "support", client "support-assistant"
+#   sign-in    anna (support), oleg (support, owner), eve (no role); the password equals the user name
+#
+# Everything here is for development: fixed credentials, a test identity provider, data in local volumes.
+name: naive-support-agent
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: assistant
+      POSTGRES_PASSWORD: assistant
+      POSTGRES_DB: assistant
+    ports:
+      # Loopback only, and not 5432: the server tests run on the host against the assistant_test database.
+      - "127.0.0.1:54330:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./dev/postgres/create-test-database.sql:/docker-entrypoint-initdb.d/create-test-database.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assistant -d assistant"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8
+    command: ["start-dev", "--import-realm", "--http-port=8086"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8086:8086"
+    volumes:
+      - ./dev/keycloak/support-realm.json:/opt/keycloak/data/import/support-realm.json:ro
+    networks:
+      default:
+        aliases:
+          # The same name and port reach the provider from the browser (every *.localhost name
+          # resolves to the loopback address there) and from the other containers.
+          - keycloak.localhost
+    healthcheck:
+      test:
+        - CMD-SHELL
+        # The image has no curl or wget: ask the management port over a bash TCP socket.
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+volumes:
+  postgres-data:

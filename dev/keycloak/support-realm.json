@@ -1,0 +1,112 @@
+{
+  "realm": "support",
+  "displayName": "Support assistant development",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "roles": {
+    "client": {
+      "support-assistant": [
+        {
+          "name": "support"
+        },
+        {
+          "name": "owner"
+        }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "support-assistant",
+      "name": "Support assistant",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "support-assistant-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "profile",
+        "email",
+        "roles",
+        "acr"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "anna",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Anna",
+      "lastName": "Support",
+      "email": "anna@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "anna",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-support"
+      ],
+      "clientRoles": {
+        "support-assistant": [
+          "support"
+        ]
+      }
+    },
+    {
+      "username": "oleg",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Oleg",
+      "lastName": "Owner",
+      "email": "oleg@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "oleg",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-support"
+      ],
+      "clientRoles": {
+        "support-assistant": [
+          "support",
+          "owner"
+        ]
+      }
+    },
+    {
+      "username": "eve",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Eve",
+      "lastName": "Nobody",
+      "email": "eve@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "eve",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-support"
+      ],
+      "clientRoles": {}
+    }
+  ]
+}

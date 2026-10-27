@@ -1,0 +1,41 @@
+# A complete set of values: used by `helm lint` and `helm template` in CI, and as a starting point.
+imagePullSecrets:
+  - name: ghcr-pull
+
+settings:
+  telegram:
+    botUsername: support_example_bot
+    egress: proxy
+    groups: [-1001234567890]
+  locale: en
+  oidc:
+    issuer: https://idp.example.com/realms/main
+    clientId: support-assistant
+    rolesClaim: resource_access.support-assistant.roles
+  roles:
+    support: support
+    owner: owner
+  model:
+    name: claude-opus-5-5
+    effort: high
+    caseTokenBudget: 400000
+  followUpIntervalMinutes: 60
+  caseRetentionDays: 30
+  database:
+    host: postgres.example.com
+    port: 5432
+    name: assistant
+    user: assistant
+
+instructions:
+  configMap: assistant-instructions
+
+sources:
+  existingSecret: assistant-sources
+
+secrets:
+  existingSecret: assistant-secrets
+
+migrations:
+  podAnnotations:
+    sidecar.istio.io/inject: "false"

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "assistant.fullname" . }}
+  labels:
+    {{- include "assistant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: assistant
+spec:
+  # Telegram hands the updates of a bot to one reader: one pod, and the old one goes before the new starts.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "assistant.selectorLabels" (dict "root" . "component" "assistant") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "assistant.selectorLabels" (dict "root" . "component" "assistant") | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- include "assistant.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: assistant
+          image: {{ include "assistant.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- include "assistant.env" . | nindent 12 }}
+          {{- with .Values.sources.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
+          volumeMounts:
+            - name: instructions
+              mountPath: /instructions
+              readOnly: true
+            # The clone of the code and the frames of videos.
+            - name: scratch
+              mountPath: /tmp
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: instructions
+          configMap:
+            name: {{ required "instructions.configMap is required" .Values.instructions.configMap }}
+        - name: scratch
+          emptyDir: {}

@@ -1,0 +1,22 @@
+# Fields of what the sources return that hold names or payment data.
+personal_fields = ["full_name", "card_holder", "card_last4"]
+
+# A read-only database over MCP. The command runs inside the assistant's container, so a stdio
+# server has to be in the image; an HTTP server runs on its own.
+# [[source]]
+# kind = "mcp"
+# name = "example_db"
+# description = "The store's database, read only."
+# transport = "http"
+# url = "http://db-mcp.internal:8000/mcp"
+# tools = ["query"]
+
+# The code of the product, kept as a local clone and only read.
+# [[source]]
+# kind = "repository"
+# name = "code"
+# description = "The code of the store."
+# url = "https://github.com/example/store.git"
+# branch = "main"
+# token_env = "CODE_READ_TOKEN"
+# sync_minutes = 30

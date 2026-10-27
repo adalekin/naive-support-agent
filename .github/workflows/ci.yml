@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: assistant
+          POSTGRES_PASSWORD: assistant
+          POSTGRES_DB: assistant_test
+        ports:
+          - 54330:5432
+        options: >-
+          --health-cmd "pg_isready -U assistant -d assistant_test"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      # The tests take frames out of a video and keep a clone of a repository.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg git
+      - run: uv sync --python 3.12 --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t assistant:ci -f server/docker/Dockerfile server
+      # Without its settings the service refuses to start and names what is missing.
+      - run: |
+          out=$(docker run --rm assistant:ci 2>&1) && exit 1
+          echo "$out" | grep -q "Invalid installation settings: TELEGRAM_BOT_TOKEN"
+
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+      - run: helm lint deploy/helm/naive-support-agent -f deploy/helm/naive-support-agent/ci/example-values.yaml
+      - run: helm template assistant deploy/helm/naive-support-agent -f deploy/helm/naive-support-agent/ci/example-values.yaml > /dev/null
+
+  openspec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npx -y @fission-ai/openspec@1.13.2 validate --all --strict --no-interactive

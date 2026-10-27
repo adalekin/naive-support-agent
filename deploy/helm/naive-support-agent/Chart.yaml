@@ -1,0 +1,9 @@
+apiVersion: v2
+name: naive-support-agent
+description: Support agent that investigates customer cases for support staff
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/adalekin/naive-support-agent
+sources:
+  - https://github.com/adalekin/naive-support-agent

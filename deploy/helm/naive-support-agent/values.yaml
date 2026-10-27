@@ -1,0 +1,90 @@
+# Values without a default are required: `helm install` fails and names the missing one.
+# The chart does not run PostgreSQL, the identity provider, or the sources the assistant reads.
+
+imagePullSecrets: []
+
+settings:
+  telegram:
+    # Name of the bot without the at sign
+    botUsername: ""
+    # How the service reaches api.telegram.org: direct or proxy.
+    # With proxy the address is the TELEGRAM_PROXY_URL key of the Secret: it may carry a password.
+    egress: ""
+    # Numbers of the internal group chats the assistant works in; none means private chats only.
+    # Only groups of the organization's staff, never a chat with clients.
+    groups: []
+  # Language of the assistant's own messages: ru or en. Answers follow the instructions.
+  locale: ""
+  # OpenID Connect provider of the organization, with the device authorization grant on for the client
+  oidc:
+    # Issuer URL, e.g. https://idp.example.com/realms/main
+    issuer: ""
+    clientId: ""
+    # Where the provider lists roles in an access token, a dot-separated path, e.g. resource_access.<client>.roles
+    rolesClaim: ""
+  roles:
+    # The role that gives access to the assistant
+    support: ""
+    # The role of the people the assistant calls when it has no answer
+    owner: ""
+  model:
+    # e.g. claude-opus-5-5
+    name: ""
+    # low, medium, high, xhigh or max
+    effort: ""
+    # Tokens, input and output together, one request about a case may spend
+    caseTokenBudget: ""
+  # How often cases that wait for a fix are checked again, in minutes
+  followUpIntervalMinutes: ""
+  # After how many days without a turn a case is deleted, with its conversation and the client's data
+  caseRetentionDays: ""
+  database:
+    host: ""
+    port: 5432
+    name: ""
+    user: ""
+
+# The installation's instructions: a ConfigMap with the *.md files and sources.toml, mounted as a directory.
+instructions:
+  configMap: ""
+
+# Variables the sources are given (sources.toml: env and token_env): a Secret whose keys become
+# variables of the container. The assistant hands each source only the names listed for it.
+sources:
+  existingSecret: ""
+
+# Secret settings. Either name an existing Secret holding the keys below, or put the values here
+# and the chart creates the Secret.
+#   TELEGRAM_BOT_TOKEN, OIDC_CLIENT_SECRET, ANTHROPIC_API_KEY, ENCRYPTION_KEY, DB_PASSWORD
+#   and, with egress: proxy, TELEGRAM_PROXY_URL
+secrets:
+  existingSecret: ""
+  values:
+    telegramBotToken: ""
+    oidcClientSecret: ""
+    anthropicApiKey: ""
+    # A Fernet key; it encrypts the staff's tokens and the data of cases: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    encryptionKey: ""
+    dbPassword: ""
+    # Address of the proxy, e.g. socks5://user:password@proxy.internal:1080, with settings.telegram.egress: proxy
+    telegramProxyUrl: ""
+
+image:
+  repository: ghcr.io/adalekin/naive-support-agent
+  # Defaults to the chart's appVersion
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# One pod only: Telegram hands the updates of a bot to one reader.
+podAnnotations: {}
+podLabels: {}
+resources: {}
+
+# The Job that runs database migrations on every install and upgrade. The assistant waits until
+# the schema is at its revision before it reads any update.
+migrations:
+  podAnnotations: {}
+  podLabels: {}
+  resources: {}
+  # Seconds a finished Job is kept for its logs
+  ttlSecondsAfterFinished: 86400
