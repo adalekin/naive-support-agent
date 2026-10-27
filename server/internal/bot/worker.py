@@ -284,6 +284,8 @@ class CaseWorker:
                 case_id=case.id,
                 input_tokens=outcome.input_tokens,
                 output_tokens=outcome.output_tokens,
+                cache_read_tokens=outcome.cache_read_tokens,
+                cache_write_tokens=outcome.cache_write_tokens,
             )
 
         if took_over:

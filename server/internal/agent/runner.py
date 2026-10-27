@@ -21,8 +21,12 @@ FALLBACK_BETA = "server-side-fallback-2026-07-01"
 class TurnOutcome:
     #: Why there is no answer, in plain words, when there is none.
     failure: str | None
+    #: All input of the turn, read from the cache or not: what the budget counts.
     input_tokens: int
     output_tokens: int
+    #: Of the input, how much was read from the prompt cache and how much was written to it.
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
 
 
 class CaseAgent:
@@ -64,15 +68,21 @@ class CaseAgent:
             output_config={"effort": self._effort},
             fallbacks="default",
             betas=[FALLBACK_BETA],
+            # The cache point moves to the end of the conversation with every request: the next
+            # request of the turn, and the next turn of the case within the cache's lifetime, read
+            # the history from the cache instead of paying for it again.
+            cache_control={"type": "ephemeral"},
         )
 
-        spent_in = spent_out = 0
+        spent_in = spent_out = cache_read = cache_write = 0
         failure: str | None = None
         last = None
         async for message in runner:
             last = message
             history.append({"role": "assistant", "content": [_block(block) for block in message.content]})
             usage = message.usage
+            cache_read += usage.cache_read_input_tokens or 0
+            cache_write += usage.cache_creation_input_tokens or 0
             spent_in += (usage.input_tokens or 0) + (usage.cache_read_input_tokens or 0)
             spent_in += usage.cache_creation_input_tokens or 0
             spent_out += usage.output_tokens or 0
@@ -96,7 +106,7 @@ class CaseAgent:
         context.case.conversation = history
         if failure is not None:
             logger.warning("Case {} has no answer: {}", context.case.id, failure)
-        return TurnOutcome(failure, spent_in, spent_out)
+        return TurnOutcome(failure, spent_in, spent_out, cache_read, cache_write)
 
     @staticmethod
     def _source_tools(gateway: SourceGateway, images: dict[str, bytes]) -> list[RunnableTool]:

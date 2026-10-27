@@ -116,6 +116,9 @@ async def test_a_turn_reads_a_source_identifies_the_client_and_answers(database,
     assert names == {"db__query", "set_case_state", "identify_client", "link_incident", "escalate",
                      "list_open_cases", "submit_answer"}  # fmt: skip
     assert model.requests[0]["fallbacks"] == "default"
+    # The system prompt and the conversation are both read from the prompt cache.
+    assert model.requests[0]["cache_control"] == {"type": "ephemeral"}
+    assert model.requests[0]["system"][-1]["cache_control"] == {"type": "ephemeral"}
 
 
 async def test_conversation_is_only_appended_to(database, setup):
