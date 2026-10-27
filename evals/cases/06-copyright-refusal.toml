@@ -1,0 +1,43 @@
+id = "copyright-refusal"
+title = "The video model refuses a picture with a book cover"
+kind = "The cause is outside the organization: what the client can do"
+requirements = [
+  "case-answer: Не обвинять клиента без данных",
+  "case-answer: Состав ответа",
+  "escalation: Когда звать ответственного",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot the client olga.s@example.com can't make a video from her picture: \
+Reel 3 refuses every time. The picture shows her holding a book."""
+
+[[responses]]
+tool = "db__query"
+match = "generations"
+output = '''[
+ {"id": 88101, "model": "Reel 3", "status": "failed", "error": "content_policy: copyrighted material (book cover)", "credits": 300, "refunded": true},
+ {"id": 88107, "model": "Reel 3", "status": "failed", "error": "content_policy: copyrighted material (book cover)", "credits": 300, "refunded": true},
+ {"id": 87990, "model": "Reel 3", "status": "succeeded", "prompt": "the same scene without the book", "credits": 300, "refunded": false}
+]'''
+
+[[responses]]
+tool = "db__query"
+match = "users"
+output = '[{"id": 5120, "email": "olga.s@example.com", "full_name": "Olga Sokolova", "created_at": "2026-05-14"}]'
+
+[expect]
+kind = "case"
+escalated = false
+
+[rubric]
+must = [
+  "The model refuses because of the book cover in the picture: it does not take copyrighted material.",
+  "What the client can do: a picture without the cover, or with the cover hidden; the same scene without the book went through.",
+  "That the credits of the refused attempts came back.",
+]
+must_not = [
+  "Blaming the client.",
+  "Calling a responsible person.",
+  "Asking to add bonus credits.",
+]

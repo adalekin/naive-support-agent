@@ -1,0 +1,47 @@
+id = "feed-opens-editor"
+title = "Which tab opens when a generation is clicked in the feed"
+kind = "A question about the product, no particular client"
+requirements = [
+  "case-requests: Вопросы о продукте",
+  "escalation: Когда звать ответственного",
+  "escalation: Что ответственный получает",
+  "case-answer: Без устройства системы",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot many people write about this: when you click a picture in the feed of your generations, \
+the Editor tab opens, and they would rather see the Info tab first, with the editor a click away."""
+
+[[responses]]
+tool = "code__search"
+match = "tab|editor|info|feed"
+output = """web/feed/AssetsFeed.vue:1301: const startTab = size === 'mini' ? 'info' : 'edit'
+web/feed/AssetsFeed.vue:1347: // Full-size cards open the editor: people come back to the feed to edit."""
+
+[[responses]]
+tool = "ui__open"
+match = "."
+output = """Desktop view, the feed of generations. Above the feed: a card size slider. At the normal size a click on a \
+card opens the viewer on the Edit tab. With the slider at the smallest size, a click opens the viewer on the Info tab."""
+
+[[responses]]
+tool = "tracker__search"
+match = "."
+output = '''[{"id": "PX-221", "title": "Feed: open Info first, users ask", "status": "open", "mentions": 2}]'''
+
+[expect]
+kind = "reply"
+escalated = true
+
+[rubric]
+must = [
+  "How it works now: a full-size card opens the Editor tab, a mini card opens Info.",
+  "A way people can use today: make the cards the smallest size with the slider above the feed.",
+  "The decision to change the default tab is put to the responsible person, with the fact that people asked for it before.",
+]
+must_not = [
+  "A promise that the default will change.",
+  "Names of files, lines of code or commits.",
+  "\"It works as designed\" as the final answer to a request people keep making.",
+]

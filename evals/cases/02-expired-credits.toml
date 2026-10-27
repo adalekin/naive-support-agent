@@ -1,0 +1,63 @@
+id = "expired-credits"
+title = "A client asks to restore credits that expired"
+kind = "Credits and plans: the rule answers it"
+requirements = [
+  "case-answer: Состав ответа",
+  "case-answer: Потери клиента при ошибке организации",
+  "case-investigation: Проверенное отдельно от предположений",
+  "escalation: Когда звать ответственного",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot the client ivan.krylov@example.com paid the Professional plan on August 10 and September 30. \
+On October 9 his 4,127 unused credits expired. He asks to restore them: he says nobody told him they expire. \
+Should we offer to give them back for a month, or answer as usual?"""
+
+[[responses]]
+tool = "db__query"
+match = "subscriptions"
+output = '''[
+ {"plan": "Professional", "paid_at": "2026-08-10", "amount": 1272, "active_until": "2026-09-10", "auto_renew": false},
+ {"plan": "Professional", "paid_at": "2026-09-30", "amount": 1590, "active_until": "2026-10-30", "auto_renew": false}
+]'''
+
+[[responses]]
+tool = "db__query"
+match = "credit_grants"
+output = '''[
+ {"id": 1, "amount": 4500, "added_at": "2026-08-10", "expires_at": "2026-10-09", "source": "plan"},
+ {"id": 2, "amount": 4500, "added_at": "2026-09-30", "expires_at": "2026-11-29", "source": "plan"}
+]'''
+
+[[responses]]
+tool = "db__query"
+match = "credit_spends"
+output = '''[
+ {"grant_id": 1, "amount": 169, "spent_at": "2026-08-19..2026-08-24", "reason": "generations"},
+ {"grant_id": 1, "amount": 204, "spent_at": "2026-10-01..2026-10-02", "reason": "chat"},
+ {"grant_id": 1, "amount": 4127, "spent_at": "2026-10-09", "reason": "expired"},
+ {"grant_id": 2, "amount": 2084, "spent_at": "2026-10-13..2026-10-19", "reason": "generations"}
+]'''
+
+[[responses]]
+tool = "db__query"
+match = "users"
+output = '[{"id": 953, "email": "ivan.krylov@example.com", "full_name": "Ivan Krylov", "created_at": "2026-08-10"}]'
+
+[expect]
+kind = "case"
+escalated = false
+
+[rubric]
+must = [
+  "A direct answer to the question: the credits are not restored, because credits that expired by their term are not restored.",
+  "The history that adds up to 4,127: 4,500 added on August 10, 169 and 204 spent, the rest expired on October 9.",
+  "That credits of a monthly plan last 60 days, twice the month.",
+  "The current balance (2,416) and the date it lasts to (November 29), while the plan is active.",
+]
+must_not = [
+  "Asking to add bonus credits or to restore the credits.",
+  "A claim that the term is not stated anywhere.",
+  "Calling a responsible person: the rules decide it.",
+]

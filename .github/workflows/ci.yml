@@ -51,6 +51,8 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
+      # The evaluation cases are read and checked; the model is not called.
+      - run: uv run python ../evals/run.py --check
 
   image:
     runs-on: ubuntu-latest

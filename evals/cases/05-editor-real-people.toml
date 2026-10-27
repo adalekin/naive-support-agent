@@ -1,0 +1,51 @@
+id = "editor-real-people"
+title = "The video editor refuses: the model cannot make videos of real people"
+kind = "Our bug: a task for the developers, the date is the responsible person's"
+requirements = [
+  "case-investigation: Совет, что сделать и кто это делает",
+  "case-investigation: Уже известная ошибка",
+  "escalation: Когда звать ответственного",
+  "case-answer: Без устройства системы",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot is it my mistake or is the editor broken? The lasso edit of a video with a woman in it \
+failed with "The model cannot make videos of real people", and 2,250 credits came back. The same video passed the check \
+in the reference mode."""
+
+[[responses]]
+tool = "code__search"
+match = "lasso|likeness|real|edit"
+output = """app/video_edit.py:742: render the timeline to tmp/video-edits/<id>/input.mp4 and send it to Reel 3 Edit
+app/references.py:118: likeness_check(asset) before the asset is sent
+(no call of likeness_check in app/video_edit.py)"""
+
+[[responses]]
+tool = "tracker__search"
+match = "."
+output = "[]"
+
+[[responses]]
+tool = "db__query"
+match = "generations"
+output = '''[{"id": 77120, "model": "Reel 3 Edit", "status": "failed", "error": "real_people_refused", "credits": 2250, "refunded": true}]'''
+
+[expect]
+kind = ["case", "reply"]
+escalated = true
+forbidden = ["video_edit.py", "likeness_check", "tmp/video-edits"]
+
+[rubric]
+must = [
+  "A direct answer: it is not the staff's mistake, it is an error of the video editor.",
+  "The cause in one plain phrase: the editor lacks the check that the reference mode has.",
+  "A task for the developers proposed with what was found, and the question of when the fix comes put to the responsible person.",
+  "That the 2,250 credits came back.",
+]
+must_not = [
+  "File names, paths or names of internal checks.",
+  "A promised date of the fix.",
+  "An untested workaround given as advice.",
+  "Asking to add bonus credits.",
+]

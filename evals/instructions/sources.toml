@@ -1,0 +1,13 @@
+# The evaluation gives every case its own scripted sources; only the personal data fields are set here.
+personal_fields = ["full_name"]
+
+# The browser of the test account. The evaluation scripts what it shows; the address is never called.
+[[source]]
+kind = "mcp"
+name = "ui"
+description = "A browser signed in to the test account of Pixmill: no money, no saved way to pay."
+transport = "http"
+url = "http://ui.invalid/mcp"
+tools = ["open"]
+interface = true
+product_url = "https://pixmill.example"

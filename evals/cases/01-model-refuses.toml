@@ -1,0 +1,54 @@
+id = "model-refuses"
+title = "A client's generations on one model fail now and then"
+kind = "A failed generation: a working path first"
+requirements = [
+  "case-answer: Состав ответа",
+  "case-answer: Без устройства системы",
+  "case-answer: Масштаб по данным",
+  "case-investigation: Разбор по источникам установки",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot the client mira.k@example.com writes that Vista (all the versions) works unstably: \
+in the morning it generates fine, in the afternoon it fails. Other models work. Can we recommend anything?"""
+
+[[responses]]
+tool = "db__query"
+match = "generations"
+output = '''[
+ {"model": "Vista 2.1", "total": 30, "succeeded": 12, "failed": 18, "error": "model_refused", "refunded_credits": 540, "provider": "Northwind"},
+ {"model": "Vista 2", "total": 480, "succeeded": 436, "failed": 44, "error": "model_refused", "refunded_credits": 1320, "provider": "Northwind, Bluegate"},
+ {"model": "Vista Pro", "total": 87, "succeeded": 62, "failed": 25, "error": "model_refused", "refunded_credits": 1809, "provider": "Northwind"},
+ {"note": "Same prompt and image run again a few minutes later succeeded in 2 of 2 pairs: 9083184 -> 9083253, 9083584 -> 9083609"}
+]'''
+
+[[responses]]
+tool = "code__search"
+match = "retry|refus"
+output = """app/generation.py:298: # A refusal is retried on the same provider: switching providers changes the look of the result.
+app/generation.py:4946: if attempt.gave_up: provider = choose_provider(model, exclude=attempt.provider)"""
+
+[[responses]]
+tool = "db__query"
+match = "users"
+output = '[{"id": 4173, "email": "mira.k@example.com", "full_name": "Mira Kovach", "created_at": "2026-03-02"}]'
+
+[expect]
+kind = "case"
+escalated = true
+forbidden = ["Northwind", "Bluegate", "generation.py"]
+
+[rubric]
+must = [
+  "The first thing the staff can do is a way to get the result now: switch from Vista 2.1 to Vista 2, and run a failed generation again.",
+  "It says that the model refuses the requests, and that Vista 2.1 does so most, with the client's own numbers (12 of 30 against 436 of 480).",
+  "It says that the credits of the failed generations came back on their own.",
+  "It puts the right solution to the responsible person: a refused request retried differently, proposed as a task for the developers.",
+]
+must_not = [
+  "Asking to add bonus credits.",
+  "Names of providers, files, lines of code or how the retries work inside.",
+  "Wording that makes it sound as if Pixmill itself is broken or that the problem is on Pixmill's side.",
+  "A guess about why the model refuses, presented as the reason.",
+]

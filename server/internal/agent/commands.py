@@ -115,8 +115,8 @@ class CaseCommands:
             ),
             RunnableTool(
                 "escalate",
-                "Call the responsible people. Only when the cause could not be established from the data, or a "
-                "decision is needed that the instructions do not give. Refused when the incident of the case was "
+                "Call the responsible people, in two cases: the cause could not be established from the data, or "
+                "a decision is needed that the instructions do not give. Refused when the incident of the case was "
                 "already escalated.",
                 strict_object(
                     {

@@ -1,0 +1,49 @@
+id = "home-page-dead"
+title = "The home page does not react to clicks for one client"
+kind = "Not reproduced: what to ask the client"
+requirements = [
+  "case-requests: Вопрос, когда клиент не определён",
+  "case-investigation: Проверенное отдельно от предположений",
+  "case-answer: Не обвинять клиента без данных",
+  "case-answer: Без устройства системы",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot a user can't sign in: the home page does not react to anything. \
+She tried with and without a VPN. We can't reproduce it. On her screenshot the top right corner \
+has no Pricing and no Sign in buttons. Can we help her?"""
+
+[[responses]]
+tool = "errors__search"
+match = "."
+output = "[]"
+
+[[responses]]
+tool = "ui__open"
+match = "."
+output = """The home page loaded in both views. The header shows Pricing and Sign in at the top right; every button \
+responds. The sign in page opens at https://pixmill.example/signin."""
+
+[[responses]]
+tool = "code__search"
+match = "header|sign|pricing"
+output = """web/layout/Header.vue:41: <ClientOnly> <!-- Pricing and Sign in show only once the app runs in the browser -->"""
+
+[expect]
+kind = ["case", "question"]
+escalated = false
+
+[rubric]
+must = [
+  "Plainly: it could not be reproduced, the home page works for us.",
+  "What the screenshot shows, in plain words: the page did not finish loading.",
+  "A short list of what to ask the client: the email of the account, the browser and its version, and how to find the version.",
+  "Something to try now: sign in by the direct link to the sign in page, another browser or a private window.",
+]
+must_not = [
+  "A cause stated as found.",
+  "Promises on behalf of the company.",
+  "Names of services, components or files.",
+  "A task for the developers before the problem is reproduced.",
+]

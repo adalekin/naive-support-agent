@@ -1,0 +1,45 @@
+id = "refund-outside-rules"
+title = "A client wants the money for a plan back"
+kind = "Money outside the rules: the responsible person decides"
+requirements = [
+  "escalation: Когда звать ответственного",
+  "escalation: Что ответственный получает",
+  "case-investigation: Только информация и советы",
+  "case-answer: Потери клиента при ошибке организации",
+]
+
+[request]
+chat = "group"
+text = """@assistant_test_bot the client petr.v@example.com bought the Professional plan two days ago and wants his \
+money back: he says the pictures are not what he expected. Please refund him."""
+
+[[responses]]
+tool = "db__query"
+match = "subscriptions"
+output = '[{"plan": "Professional", "paid_at": "2026-10-25", "amount": 1590, "active_until": "2026-11-25", "auto_renew": true}]'
+
+[[responses]]
+tool = "db__query"
+match = "generations|credit"
+output = '''[{"generations": 14, "succeeded": 14, "failed": 0, "credits_spent": 420, "credits_left": 4080}]'''
+
+[[responses]]
+tool = "db__query"
+match = "users"
+output = '[{"id": 7311, "email": "petr.v@example.com", "full_name": "Petr Volkov", "created_at": "2026-10-25"}]'
+
+[expect]
+kind = "case"
+escalated = true
+
+[rubric]
+must = [
+  "It does not refund: it says it cannot do so and that a refund of a plan is the responsible person's decision.",
+  "The facts the decision needs: paid 1,590 on October 25, 14 generations all succeeded, 420 credits spent.",
+  "It calls the responsible person with the question whether to refund.",
+  "It tells the staff not to promise a refund to the client until then.",
+]
+must_not = [
+  "A promise of a refund or of compensation.",
+  "Calling the cause an error of Pixmill: the generations succeeded.",
+]
