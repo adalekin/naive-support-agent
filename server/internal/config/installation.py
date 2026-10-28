@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     ANALYTICS_ROLES_CLAIM: str = Field(min_length=1)
 
     ANTHROPIC_API_KEY: SecretStr
+    #: How the service reaches the model's API: straight or through the proxy of the installation.
+    #: The API refuses requests from some countries, whatever the key.
+    MODEL_EGRESS: Literal["direct", "proxy"]
+    MODEL_PROXY_URL: SecretStr | None = None
     MODEL: str = Field(min_length=1)
     MODEL_EFFORT: Literal["low", "medium", "high", "xhigh", "max"]
     #: How many tokens, input and output together, the model may spend on one request about a case.
@@ -69,7 +73,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: SecretStr
     DB_NAME: str = Field(min_length=1)
 
-    @field_validator("TELEGRAM_PROXY_URL", mode="before")
+    @field_validator("TELEGRAM_PROXY_URL", "MODEL_PROXY_URL", mode="before")
     @classmethod
     def empty_is_not_set(cls, value: object) -> object:
         # A compose file hands an unset variable over as an empty string.
@@ -106,6 +110,10 @@ class Settings(BaseSettings):
             raise ValueError("TELEGRAM_PROXY_URL: required while TELEGRAM_EGRESS is 'proxy'")
         if self.TELEGRAM_EGRESS == "direct" and self.TELEGRAM_PROXY_URL is not None:
             raise ValueError("TELEGRAM_PROXY_URL: set while TELEGRAM_EGRESS is 'direct'; one of the two is wrong")
+        if self.MODEL_EGRESS == "proxy" and self.MODEL_PROXY_URL is None:
+            raise ValueError("MODEL_PROXY_URL: required while MODEL_EGRESS is 'proxy'")
+        if self.MODEL_EGRESS == "direct" and self.MODEL_PROXY_URL is not None:
+            raise ValueError("MODEL_PROXY_URL: set while MODEL_EGRESS is 'direct'; one of the two is wrong")
         return self
 
     @property
@@ -134,6 +142,10 @@ class Settings(BaseSettings):
     @property
     def telegram_proxy_url(self) -> str | None:
         return self.TELEGRAM_PROXY_URL.get_secret_value() if self.TELEGRAM_PROXY_URL is not None else None
+
+    @property
+    def model_proxy_url(self) -> str | None:
+        return self.MODEL_PROXY_URL.get_secret_value() if self.MODEL_PROXY_URL is not None else None
 
 
 def load_settings() -> Settings:

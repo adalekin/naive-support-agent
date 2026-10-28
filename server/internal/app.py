@@ -7,7 +7,7 @@ from pathlib import Path
 
 from alembic.config import Config as AlembicConfig
 from alembic.script import ScriptDirectory
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, DefaultAsyncHttpxClient
 from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
@@ -79,14 +79,22 @@ class Assistant:
                 sources.append(repository)
         self.registry = SourceRegistry(sources, allowed)
 
-        model = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY.get_secret_value())
+        self.model_proxy = settings.model_proxy_url
+        self.model = AsyncAnthropic(
+            api_key=settings.ANTHROPIC_API_KEY.get_secret_value(),
+            http_client=DefaultAsyncHttpxClient(proxy=self.model_proxy) if self.model_proxy is not None else None,
+        )
         self.postman = Postman(self.telegram, self.database)
         self.worker = CaseWorker(
             database=self.database,
             agent=CaseAgent(
-                model, settings.MODEL, settings.MODEL_EFFORT, settings.CASE_TOKEN_BUDGET, system_prompt(instructions)
+                self.model,
+                settings.MODEL,
+                settings.MODEL_EFFORT,
+                settings.CASE_TOKEN_BUDGET,
+                system_prompt(instructions),
             ),
-            classifier=CaseClassifier(model, settings.MODEL),
+            classifier=CaseClassifier(self.model, settings.MODEL),
             registry=self.registry,
             reader=AttachmentReader(self.telegram),
             guard=self.guard,

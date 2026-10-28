@@ -38,6 +38,9 @@ settings:
     effort: ""
     # Tokens, input and output together, one request about a case may spend
     caseTokenBudget: ""
+    # How the service reaches the model's API: direct or proxy. The API refuses requests from
+    # some countries. With proxy the address is the MODEL_PROXY_URL key of the Secret.
+    egress: ""
   # How often cases that wait for a fix are checked again, in minutes
   followUpIntervalMinutes: ""
   # After how many days without a turn a case is deleted, with its conversation and the client's data
@@ -60,7 +63,8 @@ sources:
 # Secret settings. Either name an existing Secret holding the keys below, or put the values here
 # and the chart creates the Secret.
 #   TELEGRAM_BOT_TOKEN, OIDC_CLIENT_SECRET, ANTHROPIC_API_KEY, ENCRYPTION_KEY, DB_PASSWORD
-#   and, with egress: proxy, TELEGRAM_PROXY_URL
+#   and TELEGRAM_PROXY_URL with settings.telegram.egress: proxy,
+#   MODEL_PROXY_URL with settings.model.egress: proxy
 secrets:
   existingSecret: ""
   values:
@@ -72,6 +76,8 @@ secrets:
     dbPassword: ""
     # Address of the proxy, e.g. socks5://user:password@proxy.internal:1080, with settings.telegram.egress: proxy
     telegramProxyUrl: ""
+    # Address of the proxy to the model's API, with settings.model.egress: proxy
+    modelProxyUrl: ""
 
 image:
   repository: ghcr.io/adalekin/naive-support-agent

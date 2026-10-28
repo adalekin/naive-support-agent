@@ -89,6 +89,7 @@
 
 - [x] 15.1 Транспорт `sse` и `token_env` у сетевых источников в `sources.toml`; токен уходит заголовком `Authorization: Bearer`, источник без своей переменной недоступен. Проверка: тесты загрузки `sources.toml` и подключения к серверу MCP по SSE и по потоковому HTTP с токеном.
 - [x] 15.2 Чарт: `extraContainers` пода и переменные `ROLE_ANALYTICS`, `ANALYTICS_ROLES_CLAIM`; README. Проверка: `helm template` в CI с примером значений даёт каждую обязательную настройку `Settings` и дополнительный контейнер.
+- [x] 15.3 Выход к API модели напрямую или через прокси установки (`MODEL_EGRESS`, `MODEL_PROXY_URL`), в чарте `settings.model.egress` и ключ `MODEL_PROXY_URL` секрета; README. Проверка: тесты настроек и сборки клиента модели с прокси и без, `helm template` требует адрес прокси при `proxy`.
 
 ## 12. Оценка ответов
 

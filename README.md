@@ -54,6 +54,8 @@ All settings come from the environment. None has a default, and the service won'
 | `ROLE_SUPPORT`, `ROLE_OWNER` | the role that gives access; the role of responsible people |
 | `ROLE_ANALYTICS`, `ANALYTICS_ROLES_CLAIM` | the role of people who may ask for aggregate figures (totals, breakdowns), and where the provider lists it; it may be a role of another application, e.g. `resource_access.admin-panel.roles` |
 | `ANTHROPIC_API_KEY` | secret |
+| `MODEL_EGRESS` | `direct` or `proxy`: the model's API refuses requests from some countries, whatever the key |
+| `MODEL_PROXY_URL` | with `proxy`; secret, may carry a password |
 | `MODEL`, `MODEL_EFFORT` | e.g. `claude-opus-5-5`, `high` |
 | `CASE_TOKEN_BUDGET` | tokens one request about a case may spend |
 | `INSTRUCTIONS_DIR` | the instructions directory |

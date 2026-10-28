@@ -33,6 +33,8 @@ TEST_ENVIRONMENT = {
     "ROLE_ANALYTICS": "admin",
     "ANALYTICS_ROLES_CLAIM": "resource_access.product-admin.roles",
     "ANTHROPIC_API_KEY": "test-model-key",
+    "MODEL_EGRESS": "direct",
+    "MODEL_PROXY_URL": "",
     "MODEL": "claude-opus-5-5",
     "MODEL_EFFORT": "high",
     "CASE_TOKEN_BUDGET": "200000",

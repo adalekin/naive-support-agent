@@ -60,3 +60,16 @@ def test_secrets_do_not_show_in_the_settings_repr(environment):
     shown = repr(load_settings())
     for secret in ("test-token", "client-secret", "test-model-key"):
         assert secret not in shown
+
+
+def test_model_through_a_proxy_needs_its_address(environment, monkeypatch):
+    monkeypatch.setenv("MODEL_EGRESS", "proxy")
+    with pytest.raises(ConfigurationError, match="MODEL_PROXY_URL"):
+        load_settings()
+
+
+def test_model_address_of_a_proxy_with_direct_egress_is_a_mistake(environment, monkeypatch):
+    monkeypatch.setenv("MODEL_PROXY_URL", "socks5://user:secret@proxy.test:1080")
+    with pytest.raises(ConfigurationError, match="MODEL_PROXY_URL") as error:
+        load_settings()
+    assert "secret" not in str(error.value)

@@ -54,6 +54,8 @@ imagePullSecrets:
   value: {{ required "settings.telegram.botUsername is required" $s.telegram.botUsername | quote }}
 - name: TELEGRAM_EGRESS
   value: {{ required "settings.telegram.egress is required: direct or proxy" $s.telegram.egress | quote }}
+- name: MODEL_EGRESS
+  value: {{ required "settings.model.egress is required: direct or proxy" $s.model.egress | quote }}
 - name: TELEGRAM_GROUPS
   {{- /* Chat numbers are large: YAML reads them as floats, so each is printed as a whole number. */}}
   value: {{ $groups := list }}{{ range $s.telegram.groups }}{{ $groups = append $groups (printf "%d" (int64 .)) }}{{ end }}{{ $groups | join "," | quote }}
@@ -98,5 +100,8 @@ imagePullSecrets:
 {{- end }}
 {{- if eq $s.telegram.egress "proxy" }}
 {{ include "assistant.secretEnv" (dict "root" $ "name" "TELEGRAM_PROXY_URL") }}
+{{- end }}
+{{- if eq $s.model.egress "proxy" }}
+{{ include "assistant.secretEnv" (dict "root" $ "name" "MODEL_PROXY_URL") }}
 {{- end }}
 {{- end -}}

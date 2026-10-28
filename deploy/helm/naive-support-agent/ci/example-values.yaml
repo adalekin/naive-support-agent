@@ -21,6 +21,7 @@ settings:
     name: claude-opus-5-5
     effort: high
     caseTokenBudget: 400000
+    egress: proxy
   followUpIntervalMinutes: 60
   caseRetentionDays: 30
   database:
