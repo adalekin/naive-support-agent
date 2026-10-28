@@ -1,7 +1,12 @@
-"""A stdio MCP server for the tests: one read tool and one write tool under a harmless name."""
+"""An MCP server for the tests: one read tool and one write tool under a harmless name.
+
+Without arguments it speaks stdio. ``sse <port>`` or ``http <port>`` serves it over the network and
+lets in only requests that carry the bearer token in ``SOURCE_TOKEN``.
+"""
 
 import json
 import os
+import sys
 
 from mcp.server.mcpserver import MCPServer
 
@@ -31,5 +36,24 @@ def whoami() -> str:
     return json.dumps({"token": os.environ.get("SOURCE_TOKEN"), "assistant_key": os.environ.get("ANTHROPIC_API_KEY")})
 
 
+def serve(transport: str, port: int) -> None:
+    import uvicorn
+    from starlette.responses import PlainTextResponse
+
+    app = server.sse_app() if transport == "sse" else server.streamable_http_app()
+    expected = f"Bearer {os.environ['SOURCE_TOKEN']}".encode()
+
+    async def guarded(scope, receive, send):
+        if scope["type"] == "http" and dict(scope["headers"]).get(b"authorization") != expected:
+            await PlainTextResponse("no token", status_code=401)(scope, receive, send)
+            return
+        await app(scope, receive, send)
+
+    uvicorn.run(guarded, host="127.0.0.1", port=port, log_level="warning")
+
+
 if __name__ == "__main__":
-    server.run("stdio")
+    if len(sys.argv) == 3:
+        serve(sys.argv[1], int(sys.argv[2]))
+    else:
+        server.run("stdio")

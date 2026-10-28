@@ -15,6 +15,8 @@ settings:
   roles:
     support: support
     owner: owner
+    analytics: admin
+    analyticsClaim: resource_access.admin-panel.roles
   model:
     name: claude-opus-5-5
     effort: high
@@ -32,6 +34,18 @@ instructions:
 
 sources:
   existingSecret: assistant-sources
+
+# The database source: postgres-mcp speaks SSE, the assistant reaches it at localhost:8000/sse.
+extraContainers:
+  - name: database
+    image: mirror.gcr.io/crystaldba/postgres-mcp:0.3.0
+    args: ["--access-mode=restricted", "--transport=sse", "--sse-host=127.0.0.1", "--sse-port=8000"]
+    env:
+      - name: DATABASE_URI
+        valueFrom:
+          secretKeyRef:
+            name: assistant-database-source
+            key: DATABASE_URI
 
 secrets:
   existingSecret: assistant-secrets

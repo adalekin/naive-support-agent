@@ -5,16 +5,24 @@ from contextlib import AsyncExitStack
 from typing import Any
 
 import anyio
+from httpx2 import HTTPError
 from loguru import logger
 from mcp import ClientSession, StdioServerParameters, types
+from mcp.client.sse import sse_client
 from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.shared._httpx_utils import create_mcp_http_client
 from mcp.shared.exceptions import MCPError
 
 from internal.config.instructions import McpSourceSpec
 from internal.sources.base import Image, Source, SourceUnavailable, ToolOutput, ToolSpec
 
 CALL_TIMEOUT_SECONDS = 120.0
+
+
+def _first(group: BaseExceptionGroup) -> BaseException:
+    first = group.exceptions[0]
+    return _first(first) if isinstance(first, BaseExceptionGroup) else first
 
 
 class McpSource(Source):
@@ -41,6 +49,8 @@ class McpSource(Source):
         await self._ready.wait()
         if self._failure is not None:
             await self._task
+            if isinstance(self._failure, SourceUnavailable):
+                raise self._failure
             raise SourceUnavailable(f"cannot start: {type(self._failure).__name__}") from self._failure
 
     async def _hold(self) -> None:
@@ -57,18 +67,32 @@ class McpSource(Source):
                     streams = await stack.enter_async_context(
                         stdio_client(StdioServerParameters(command=command, args=args, env=env))
                     )
+                elif self._spec.transport == "sse":
+                    streams = await stack.enter_async_context(sse_client(self._spec.url or "", headers=self._headers()))
                 else:
-                    streams = await stack.enter_async_context(streamable_http_client(self._spec.url or ""))
+                    client = await stack.enter_async_context(create_mcp_http_client(headers=self._headers()))
+                    streams = await stack.enter_async_context(
+                        streamable_http_client(self._spec.url or "", http_client=client)
+                    )
                 session = await stack.enter_async_context(ClientSession(streams[0], streams[1]))
                 await session.initialize()
                 self._session = session
                 self._ready.set()
                 await self._stop.wait()
-        except (OSError, MCPError) as exc:
-            self._failure = exc
+        except* (OSError, MCPError, HTTPError, SourceUnavailable) as failures:
+            # The transports raise from their task groups: the first cause is what the source is down for.
+            self._failure = _first(failures)
         finally:
             self._session = None
             self._ready.set()
+
+    def _headers(self) -> dict[str, str]:
+        name = self._spec.token_env
+        if name is None:
+            return {}
+        if name not in os.environ:
+            raise SourceUnavailable(f"{name} is not set")
+        return {"Authorization": f"Bearer {os.environ[name]}"}
 
     @property
     def alive(self) -> bool:

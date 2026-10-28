@@ -11,7 +11,7 @@ Nothing about the organization or its product is in this repository. Each instal
   2. Add the bot to the organization's internal groups. Use only groups of staff, never a chat that has clients in it.
   3. `/setjoingroups` → Disable. Nobody can add the bot anywhere else after that. If it is added to an unlisted group anyway, it leaves right away.
 - An OpenID Connect provider with the device authorization grant (RFC 8628) and `offline_access` on for the assistant's client. The client needs two roles: one that gives access to the assistant and one for the responsible people it calls. A staff member writes to the bot, signs in at the provider with the code the bot sends, and their Telegram account gets bound to their account. On every request the assistant asks the provider whether the account is still enabled and still holds the role. Disabling the account or taking the role away ends access on the next message.
-- Sources. Two kinds are supported: MCP servers (a database, logs, an error tracker, a task tracker, a browser) and a git repository of the code. Every source is read-only, and the assistant calls only the tools the installation lists. Give each source access that can't write anyway. A stdio MCP server runs inside the assistant's container, so it has to be in the image (build one on top of this one). An HTTP MCP server runs on its own.
+- Sources. Two kinds are supported: MCP servers (a database, logs, an error tracker, a task tracker, a browser) and a git repository of the code. Every source is read-only, and the assistant calls only the tools the installation lists. Give each source access that can't write anyway. An MCP server is reached in one of three ways: `stdio` starts it inside the assistant's container, so it has to be in the image; `http` (streamable HTTP) and `sse` reach a server over the network, with `token_env` naming the variable that holds its bearer token if it asks for one. A server that isn't in the image can run as another container of the assistant's pod (`extraContainers` in the chart), reached at `localhost`.
 - A test account of the product, optional. It must have no money and no saved way to pay. The browser source is started signed in to it, and the assistant walks the client's path there.
 - PostgreSQL for the assistant's own data: bindings, cases, the journal.
 - An Anthropic API key.
@@ -52,6 +52,7 @@ All settings come from the environment. None has a default, and the service won'
 | `OIDC_CLIENT_SECRET` | secret |
 | `OIDC_ROLES_CLAIM` | dotted path to the roles in an access token, e.g. `resource_access.support-assistant.roles` |
 | `ROLE_SUPPORT`, `ROLE_OWNER` | the role that gives access; the role of responsible people |
+| `ROLE_ANALYTICS`, `ANALYTICS_ROLES_CLAIM` | the role of people who may ask for aggregate figures (totals, breakdowns), and where the provider lists it; it may be a role of another application, e.g. `resource_access.admin-panel.roles` |
 | `ANTHROPIC_API_KEY` | secret |
 | `MODEL`, `MODEL_EFFORT` | e.g. `claude-opus-5-5`, `high` |
 | `CASE_TOKEN_BUDGET` | tokens one request about a case may spend |

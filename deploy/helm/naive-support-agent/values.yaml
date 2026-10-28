@@ -27,6 +27,10 @@ settings:
     support: ""
     # The role of the people the assistant calls when it has no answer
     owner: ""
+    # The role of the people who may ask for aggregate figures, and where the provider lists it,
+    # e.g. admin in resource_access.<admin client>.roles
+    analytics: ""
+    analyticsClaim: ""
   model:
     # e.g. claude-opus-5-5
     name: ""
@@ -74,6 +78,10 @@ image:
   # Defaults to the chart's appVersion
   tag: ""
   pullPolicy: IfNotPresent
+
+# Servers of the installation's sources run as more containers of the pod; the assistant reaches
+# them at localhost (sources.toml: transport http or sse). Their secrets stay in their own env.
+extraContainers: []
 
 # One pod only: Telegram hands the updates of a bot to one reader.
 podAnnotations: {}

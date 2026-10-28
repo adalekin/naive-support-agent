@@ -75,3 +75,28 @@ def test_interface_source_needs_the_product_address(tmp_path):
 def test_without_interface_source_the_assistant_still_starts(tmp_path):
     write(tmp_path, {"cases.md": "x", "sources.toml": SOURCES})
     assert not InstructionSet.load(tmp_path).has_interface
+
+
+NETWORK = """
+personal_fields = []
+
+[[source]]
+kind = "mcp"
+name = "errors"
+description = "Errors of the services."
+transport = "sse"
+url = "http://localhost:8000/sse"
+token_env = "ERRORS_TOKEN"
+tools = ["list_issues"]
+"""
+
+
+def test_a_network_source_names_the_variable_with_its_token(tmp_path):
+    write(tmp_path, {"cases.md": "x", "sources.toml": NETWORK})
+    assert InstructionSet.load(tmp_path).sources[0].token_env == "ERRORS_TOKEN"
+
+
+def test_a_stdio_source_takes_no_token_variable(tmp_path):
+    write(tmp_path, {"cases.md": "x", "sources.toml": SOURCES.replace('env = ["DATABASE_URI"]', 'token_env = "X"')})
+    with pytest.raises(ConfigurationError, match="token_env"):
+        InstructionSet.load(tmp_path)

@@ -122,3 +122,80 @@ async def test_a_source_down_at_start_does_not_stop_the_others_and_is_started_ag
         assert other.unavailable_note() is None
     finally:
         await other.close()
+
+
+def free_port() -> int:
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+@pytest.fixture(params=["sse", "http"])
+async def network_server(request, monkeypatch):
+    import asyncio
+    import os
+
+    port = free_port()
+    env = {**os.environ, "SOURCE_TOKEN": "errors-token"}
+    process = await asyncio.create_subprocess_exec(sys.executable, SERVER, request.param, str(port), env=env)
+    for _ in range(100):
+        try:
+            _, writer = await asyncio.open_connection("127.0.0.1", port)
+            writer.close()
+            break
+        except OSError:
+            await asyncio.sleep(0.05)
+    path = "/sse" if request.param == "sse" else "/mcp"
+    yield request.param, f"http://127.0.0.1:{port}{path}"
+    process.terminate()
+    await process.wait()
+
+
+def network_spec(transport, url, token_env):
+    return McpSourceSpec(
+        kind="mcp",
+        name="errors",
+        description="Errors of the services.",
+        transport=transport,
+        url=url,
+        token_env=token_env,
+        tools=["find_user"],
+    )
+
+
+async def test_a_network_source_is_reached_with_its_token(network_server, monkeypatch):
+    transport, url = network_server
+    monkeypatch.setenv("ERRORS_TOKEN", "errors-token")
+    registry = SourceRegistry([McpSource(network_spec(transport, url, "ERRORS_TOKEN"))], {"errors": ["find_user"]})
+    await registry.start()
+    try:
+        output = await registry.gateway(pseudonymizer()).call("errors__find_user", {"email": "nobody@example.com"})
+        assert not output.is_error and output.text == "[]"
+    finally:
+        await registry.close()
+
+
+async def test_a_network_source_without_its_variable_is_down_and_named(network_server, monkeypatch):
+    transport, url = network_server
+    monkeypatch.delenv("ERRORS_TOKEN", raising=False)
+    registry = SourceRegistry([McpSource(network_spec(transport, url, "ERRORS_TOKEN"))], {"errors": ["find_user"]})
+    await registry.start()
+    try:
+        assert registry.tools == {}
+        assert "errors (ERRORS_TOKEN is not set)" in registry.unavailable_note()
+    finally:
+        await registry.close()
+
+
+async def test_a_network_source_refusing_the_token_is_down(network_server, monkeypatch):
+    transport, url = network_server
+    monkeypatch.setenv("ERRORS_TOKEN", "wrong-token")
+    registry = SourceRegistry([McpSource(network_spec(transport, url, "ERRORS_TOKEN"))], {"errors": ["find_user"]})
+    await registry.start()
+    try:
+        assert registry.tools == {}
+        assert "wrong-token" not in (registry.unavailable_note() or "")
+    finally:
+        await registry.close()

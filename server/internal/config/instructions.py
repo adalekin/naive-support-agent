@@ -32,13 +32,16 @@ class McpSourceSpec(_Strict):
     name: str = Field(pattern=NAME_PATTERN)
     #: What the source is for, in the words the model reads.
     description: str = Field(min_length=1)
-    transport: Literal["stdio", "http"]
+    #: stdio starts the server inside the container; http is streamable HTTP; sse the older server-sent events.
+    transport: Literal["stdio", "http", "sse"]
     #: The command that starts a stdio server.
     command: list[str] | None = None
-    #: The address of an HTTP server.
+    #: The address of a network server.
     url: str | None = None
     #: Names of variables of the assistant's own environment handed to a stdio server: secrets stay out of the file.
     env: list[str] = []
+    #: A variable of the assistant's environment with a token a network server asks for, sent as a bearer token.
+    token_env: str | None = None
     tools: list[str] = Field(min_length=1)
     #: The source walks the product's interface under the installation's test account: a browser server
     #: started signed in to an account with no money and no saved way to pay.
@@ -48,14 +51,16 @@ class McpSourceSpec(_Strict):
 
     @model_validator(mode="after")
     def check_transport(self) -> "McpSourceSpec":
-        if self.transport == "stdio" and not self.command:
-            raise ValueError("a stdio source needs a command")
-        if self.transport == "http" and not self.url:
-            raise ValueError("an http source needs a url")
-        if self.transport == "stdio" and self.url:
-            raise ValueError("a stdio source takes no url")
-        if self.transport == "http" and (self.command or self.env):
-            raise ValueError("an http source takes no command and no env")
+        if self.transport == "stdio":
+            if not self.command:
+                raise ValueError("a stdio source needs a command")
+            if self.url or self.token_env:
+                raise ValueError("a stdio source takes no url and no token_env: it is given env")
+        else:
+            if not self.url:
+                raise ValueError(f"an {self.transport} source needs a url")
+            if self.command or self.env:
+                raise ValueError(f"an {self.transport} source takes no command and no env")
         if self.interface != (self.product_url is not None):
             raise ValueError("product_url is given exactly for the source that walks the interface")
         return self

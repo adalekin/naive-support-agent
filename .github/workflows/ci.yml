@@ -70,7 +70,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
       - run: helm lint deploy/helm/naive-support-agent -f deploy/helm/naive-support-agent/ci/example-values.yaml
-      - run: helm template assistant deploy/helm/naive-support-agent -f deploy/helm/naive-support-agent/ci/example-values.yaml > /dev/null
+      - run: helm template assistant deploy/helm/naive-support-agent -f deploy/helm/naive-support-agent/ci/example-values.yaml | python3 deploy/helm/check-settings.py
 
   openspec:
     runs-on: ubuntu-latest
