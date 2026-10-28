@@ -237,7 +237,7 @@ class CaseCommands:
         if "escalate" in self._done:
             raise Refused("The responsible people are already called in this turn.")
         try:
-            everyone = await context.guard.owners()
+            everyone = await context.guard.escalation_targets()
         except ProviderUnavailable as exc:
             raise Refused(
                 "The sign-in provider does not answer, so the responsible people cannot be found now. "

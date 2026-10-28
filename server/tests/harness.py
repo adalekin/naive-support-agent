@@ -141,7 +141,7 @@ class Harness:
         self.telegram = FakeTelegram(httpx_mock)
         self.provider = FakeProvider(httpx_mock)
         self.provider.account("sub-anna", "anna", ["support"])
-        self.provider.account("sub-oleg", "oleg", ["support", "owner"])
+        self.provider.account("sub-oleg", "oleg", ["support", "owner", "escalation"])
         self.provider.account("sub-eve", "eve", [])
         self.model = model
         self.source = Database()

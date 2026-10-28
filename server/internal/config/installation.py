@@ -41,8 +41,10 @@ class Settings(BaseSettings):
     OIDC_ROLES_CLAIM: str = Field(min_length=1)
     #: The role that lets a person use the assistant.
     ROLE_SUPPORT: str = Field(min_length=1)
-    #: The role of the people the assistant calls when it has no answer.
+    #: The role of the responsible people: the summary and the notices about new bindings.
     ROLE_OWNER: str = Field(min_length=1)
+    #: The role of the people the assistant calls when it has no answer.
+    ROLE_ESCALATION: str = Field(min_length=1)
     #: The role of the people who may ask for aggregate figures over the data (totals, breakdowns).
     ROLE_ANALYTICS: str = Field(min_length=1)
     #: Where the provider lists that role: it may be a role of another application, e.g. the admin panel.
@@ -134,6 +136,10 @@ class Settings(BaseSettings):
     @property
     def role_owner(self) -> Role:
         return Role(self.OIDC_ROLES_CLAIM, self.ROLE_OWNER)
+
+    @property
+    def role_escalation(self) -> Role:
+        return Role(self.OIDC_ROLES_CLAIM, self.ROLE_ESCALATION)
 
     @property
     def role_analytics(self) -> Role:

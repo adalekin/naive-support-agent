@@ -139,7 +139,7 @@ class HandleMessage(Handler[Said]):
         except ProviderUnavailable:
             logger.warning("Could not tell whether a responsible person was called: the provider is unavailable")
             return
-        if not any(staff.is_owner for staff in called):
+        if not any(staff.takes_escalations for staff in called):
             return
         staff = await self._staff(event, desk, reply_in_chat=False)
         if staff is not None:
@@ -152,7 +152,7 @@ class HandleMessage(Handler[Said]):
         if staff is None:
             return
         cases = CaseRepository(desk.session)
-        if staff.is_owner and staff.identity.subject != case.staff_subject:
+        if staff.takes_escalations and staff.identity.subject != case.staff_subject:
             # The responsible person answered: the assistant stops writing in the thread and offers
             # them a rule for the instructions instead.
             case.owner_took_over = True

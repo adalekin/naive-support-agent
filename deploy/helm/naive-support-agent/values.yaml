@@ -25,8 +25,10 @@ settings:
   roles:
     # The role that gives access to the assistant
     support: ""
-    # The role of the people the assistant calls when it has no answer
+    # The role of the responsible people: the summary and the notices about new bindings
     owner: ""
+    # The role of the people the assistant calls when it has no answer
+    escalation: ""
     # The role of the people who may ask for aggregate figures, and where the provider lists it,
     # e.g. admin in resource_access.<admin client>.roles
     analytics: ""

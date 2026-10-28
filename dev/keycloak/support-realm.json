@@ -12,6 +12,9 @@
         },
         {
           "name": "owner"
+        },
+        {
+          "name": "escalation"
         }
       ],
       "product-admin": [
@@ -106,7 +109,8 @@
       "clientRoles": {
         "support-assistant": [
           "support",
-          "owner"
+          "owner",
+          "escalation"
         ],
         "product-admin": [
           "admin"

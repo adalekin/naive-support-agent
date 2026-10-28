@@ -73,3 +73,9 @@ def test_model_address_of_a_proxy_with_direct_egress_is_a_mistake(environment, m
     with pytest.raises(ConfigurationError, match="MODEL_PROXY_URL") as error:
         load_settings()
     assert "secret" not in str(error.value)
+
+
+def test_the_escalation_role_is_required(environment, monkeypatch):
+    monkeypatch.delenv("ROLE_ESCALATION")
+    with pytest.raises(ConfigurationError, match="ROLE_ESCALATION"):
+        load_settings()

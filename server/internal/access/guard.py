@@ -19,7 +19,10 @@ class Staff:
     binding: StaffBinding
     identity: Identity
     may_use: bool
+    #: Gets the summary and the notices about new bindings.
     is_owner: bool
+    #: The questions are escalated to them: called, recognised when mentioned, takes a thread by answering.
+    takes_escalations: bool
     #: May ask for aggregate figures over the data: totals and breakdowns, never lists of clients.
     may_analyze: bool = False
 
@@ -41,6 +44,7 @@ class AccessGuard:
         cipher: TokenCipher,
         role_support: Role,
         role_owner: Role,
+        role_escalation: Role,
         role_analytics: Role,
     ) -> None:
         self._database = database
@@ -48,6 +52,7 @@ class AccessGuard:
         self._cipher = cipher
         self._role_support = role_support
         self._role_owner = role_owner
+        self._role_escalation = role_escalation
         self._role_analytics = role_analytics
         self._locks: defaultdict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
 
@@ -65,13 +70,20 @@ class AccessGuard:
 
     async def owners(self) -> list[Staff]:
         """The bound people who hold the role of a responsible person now."""
+        return [staff for staff in await self._bound() if staff.is_owner]
+
+    async def escalation_targets(self) -> list[Staff]:
+        """The bound people the questions are escalated to now."""
+        return [staff for staff in await self._bound() if staff.takes_escalations]
+
+    async def _bound(self) -> list[Staff]:
         async with self._database.unit_of_work() as session:
             bindings = list(await session.scalars(select(StaffBinding).order_by(StaffBinding.bound_at)))
         found = []
         for binding in bindings:
             async with self._locks[binding.telegram_user_id]:
                 staff = await self._check(binding)
-            if staff is not None and staff.is_owner:
+            if staff is not None:
                 found.append(staff)
         return found
 
@@ -102,6 +114,7 @@ class AccessGuard:
             identity=identity,
             may_use=identity.holds(self._role_support),
             is_owner=identity.holds(self._role_owner),
+            takes_escalations=identity.holds(self._role_escalation),
             may_analyze=identity.holds(self._role_analytics),
         )
 

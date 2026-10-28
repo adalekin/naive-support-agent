@@ -15,6 +15,7 @@ settings:
   roles:
     support: support
     owner: owner
+    escalation: escalation
     analytics: admin
     analyticsClaim: resource_access.admin-panel.roles
   model:

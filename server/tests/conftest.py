@@ -30,6 +30,7 @@ TEST_ENVIRONMENT = {
     "OIDC_ROLES_CLAIM": "resource_access.support-assistant.roles",
     "ROLE_SUPPORT": "support",
     "ROLE_OWNER": "owner",
+    "ROLE_ESCALATION": "escalation",
     "ROLE_ANALYTICS": "admin",
     "ANALYTICS_ROLES_CLAIM": "resource_access.product-admin.roles",
     "ANTHROPIC_API_KEY": "test-model-key",

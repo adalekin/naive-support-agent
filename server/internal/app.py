@@ -59,7 +59,13 @@ class Assistant:
         )
         words = Words(settings.LOCALE)
         self.guard = AccessGuard(
-            self.database, self.oidc, cipher, settings.role_support, settings.role_owner, settings.role_analytics
+            self.database,
+            self.oidc,
+            cipher,
+            settings.role_support,
+            settings.role_owner,
+            settings.role_escalation,
+            settings.role_analytics,
         )
         self.login = DeviceLoginProcess(
             self.oidc, self.guard, cipher, words, settings.TELEGRAM_GROUPS, settings.role_support

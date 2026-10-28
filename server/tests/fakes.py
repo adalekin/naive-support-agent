@@ -11,10 +11,12 @@ from internal.access.oidc import Role
 ISSUER = "https://idp.test/realms/support"
 TOKEN_URL = f"{ISSUER}/protocol/openid-connect/token"
 DEVICE_URL = f"{ISSUER}/protocol/openid-connect/auth/device"
-#: Access, responsible person, aggregate questions: the last is a role of the admin panel's client.
+#: Access, responsible person, the one questions are escalated to, aggregate questions: the last is
+#: a role of the admin panel's client.
 ROLES = (
     Role("resource_access.support-assistant.roles", "support"),
     Role("resource_access.support-assistant.roles", "owner"),
+    Role("resource_access.support-assistant.roles", "escalation"),
     Role("resource_access.product-admin.roles", "admin"),
 )
 CLAIMS = ["resource_access.support-assistant.roles", "resource_access.product-admin.roles"]

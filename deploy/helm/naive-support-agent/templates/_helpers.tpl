@@ -71,6 +71,8 @@ imagePullSecrets:
   value: {{ required "settings.roles.support is required" $s.roles.support | quote }}
 - name: ROLE_OWNER
   value: {{ required "settings.roles.owner is required" $s.roles.owner | quote }}
+- name: ROLE_ESCALATION
+  value: {{ required "settings.roles.escalation is required" $s.roles.escalation | quote }}
 - name: ROLE_ANALYTICS
   value: {{ required "settings.roles.analytics is required" $s.roles.analytics | quote }}
 - name: ANALYTICS_ROLES_CLAIM

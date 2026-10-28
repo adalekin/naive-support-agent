@@ -60,7 +60,7 @@ async def run_turn(database, registry, model, text, *, owner=False, budget=100_0
     labels = LabelMap()
     pseudonymizer = Pseudonymizer(INSTRUCTIONS.personal_fields, labels)
     masked = pseudonymizer.mask_text(text)
-    staff = Staff(binding, Identity(f"sub-{root}", "anna", {CLAIMS[0]: frozenset({"support"})}), True, owner)
+    staff = Staff(binding, Identity(f"sub-{root}", "anna", {CLAIMS[0]: frozenset({"support"})}), True, owner, owner)
     context = CaseContext(
         database=database,
         case=case,

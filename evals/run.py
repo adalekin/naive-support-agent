@@ -183,6 +183,9 @@ class OneOwner:
     async def owners(self) -> list[Staff]:
         return [self._owner]
 
+    async def escalation_targets(self) -> list[Staff]:
+        return [self._owner]
+
 
 @dataclass
 class Result:
@@ -243,9 +246,20 @@ async def run_case(case: EvalCase, number: int, database: Database, client: Asyn
         stored = await CaseRepository(session).open(STAFF_TELEGRAM if private else CHAT, number, private, "eval-staff")
     analytics = bool(case.request.get("analytics"))
     staff = Staff(
-        staff_binding, Identity("eval-staff", "anna", {"roles": frozenset({"support"})}), True, False, analytics
+        staff_binding,
+        Identity("eval-staff", "anna", {"roles": frozenset({"support"})}),
+        may_use=True,
+        is_owner=False,
+        takes_escalations=False,
+        may_analyze=analytics,
     )
-    owner = Staff(owner_binding, Identity("eval-owner", "oleg", {"roles": frozenset({"support", "owner"})}), True, True)
+    owner = Staff(
+        owner_binding,
+        Identity("eval-owner", "oleg", {"roles": frozenset({"support", "owner", "escalation"})}),
+        may_use=True,
+        is_owner=True,
+        takes_escalations=True,
+    )
 
     labels = LabelMap()
     pseudonymizer = Pseudonymizer(instructions.personal_fields, labels)

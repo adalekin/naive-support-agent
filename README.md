@@ -51,7 +51,7 @@ All settings come from the environment. None has a default, and the service won'
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID` | |
 | `OIDC_CLIENT_SECRET` | secret |
 | `OIDC_ROLES_CLAIM` | dotted path to the roles in an access token, e.g. `resource_access.support-assistant.roles` |
-| `ROLE_SUPPORT`, `ROLE_OWNER` | the role that gives access; the role of responsible people |
+| `ROLE_SUPPORT`, `ROLE_OWNER`, `ROLE_ESCALATION` | the role that gives access; the role of responsible people, who get the summary and the notices about new bindings; the role of the people the questions are escalated to |
 | `ROLE_ANALYTICS`, `ANALYTICS_ROLES_CLAIM` | the role of people who may ask for aggregate figures (totals, breakdowns), and where the provider lists it; it may be a role of another application, e.g. `resource_access.admin-panel.roles` |
 | `ANTHROPIC_API_KEY` | secret |
 | `MODEL_EGRESS` | `direct` or `proxy`: the model's API refuses requests from some countries, whatever the key |
@@ -72,7 +72,7 @@ The variables named in `sources.toml` (`env`, `token_env`) are passed to their s
 docker compose up -d
 ```
 
-This starts PostgreSQL and a Keycloak with the realm `support`. The realm has a client `support-assistant` with the device grant and three users: `anna` (support), `oleg` (support, owner) and `eve` (no role). Each password is the same as the user name.
+This starts PostgreSQL and a Keycloak with the realm `support`. The realm has a client `support-assistant` with the device grant and three users: `anna` (support), `oleg` (support, owner, escalation) and `eve` (no role). Each password is the same as the user name.
 
 ```bash
 cd server
