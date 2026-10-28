@@ -6,6 +6,7 @@ the assistant may do is decided here, in code, not by the model following a prom
 
 import datetime
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,7 +19,7 @@ from internal.agent.tools import Refused, RunnableTool, nullable, strict_object
 from internal.bot.outbox import Outbox, Send
 from internal.db import Database
 from internal.entity import Case, CaseState, Incident, JournalEntry, JournalKind
-from internal.privacy.pseudonymizer import LabelMap
+from internal.privacy.pseudonymizer import LABEL, LabelMap
 from internal.privacy.render import TextBuilder
 from internal.repository import CaseRepository, IncidentRepository, Journal
 from internal.sources.base import SourceGateway
@@ -236,12 +237,15 @@ class CaseCommands:
         if "escalate" in self._done:
             raise Refused("The responsible people are already called in this turn.")
         try:
-            owners = await context.guard.owners()
+            everyone = await context.guard.owners()
         except ProviderUnavailable as exc:
             raise Refused(
                 "The sign-in provider does not answer, so the responsible people cannot be found now. "
                 "Tell the person who asked."
             ) from exc
+        # A responsible person who asks already knows the question: the others are called.
+        asker = context.staff.identity.subject
+        owners = [owner for owner in everyone if owner.identity.subject != asker]
 
         async with context.database.unit_of_work() as session:
             journal = Journal(session)
@@ -256,7 +260,7 @@ class CaseCommands:
                 context.outbox.add(
                     Send(
                         case.chat_id,
-                        Text(context.words.say("nobody_to_call")),
+                        Text(context.words.say("only_you" if everyone else "nobody_to_call")),
                         reply_to=context.reply_to,
                         thread_id=context.thread_id,
                         case_id=case.id,
@@ -271,6 +275,8 @@ class CaseCommands:
                     question=data["question"],
                 )
                 self._done.add("escalate")
+                if everyone:
+                    return "The person who asked is the only responsible person; they are told so."
                 return "Nobody holds the role of a responsible person; the person who asked is told so."
 
             if incident is not None:
@@ -347,13 +353,29 @@ class CaseCommands:
     async def list_open_cases(self, data: dict[str, Any]) -> str:
         async with self.context.database.unit_of_work() as session:
             cases = await CaseRepository(session).open_of(self.context.staff.identity.subject)
+
+        def relabelled(case: Case, text: str | None) -> str | None:
+            # A label means a value only within its own case: the same <<email_1>> is another
+            # person in this one. Each label is carried over to this case's label of its value.
+            if text is None:
+                return None
+            theirs = LabelMap(case.labels)
+
+            def carried(match: re.Match[str]) -> str:
+                value = theirs.value(match.group())
+                if value is None:
+                    raise ValueError(f"case {case.id} holds a label it has no value for")
+                return self.context.labels.label(match.group(1), value)
+
+            return LABEL.sub(carried, text)
+
         return json.dumps(
             [
                 {
                     "case": case.id,
                     "state": case.state.value,
-                    "waiting_for": case.waiting_for,
-                    "client_account": case.client_account,
+                    "waiting_for": relabelled(case, case.waiting_for),
+                    "client_account": relabelled(case, case.client_account),
                     "opened": case.created_at.date().isoformat(),
                 }
                 for case in cases

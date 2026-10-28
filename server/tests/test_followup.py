@@ -79,3 +79,19 @@ def test_an_answer_about_a_case_needs_all_five_parts():
              "next_steps": "d", "text": None, "attachments": []}
         )  # fmt: skip
     assert Answer.from_input({"kind": "reply", "text": "x", "attachments": [], **NO_PARTS}).text == "x"
+
+
+async def test_open_cases_are_listed_in_the_labels_of_the_case_that_asks(bot, model):
+    # Each case has its own labels: <<email_1>> of one case is another person in the next.
+    model.replies += answer("Waiting.", state="waiting_fix", waiting_for="confirm the account <<email_1>>")
+    bot.telegram.message(GROUP, ANNA, "@assistant_test_bot client@example.com charged twice")
+    await bot.step()
+    model.replies += [
+        reply(tool_use("list_open_cases", {})),
+        *answer("One case waits for <<email_2>>."),
+    ]
+    bot.telegram.private(ANNA, "other@example.com wrote too; what do I have open?")
+    await bot.step()
+    listed = json.loads(tool_result_of(model, "list_open_cases"))
+    assert [case["waiting_for"] for case in listed] == ["confirm the account <<email_2>>"]
+    assert bot.telegram.texts()[-1] == "One case waits for client@example.com."

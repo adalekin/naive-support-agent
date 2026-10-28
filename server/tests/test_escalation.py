@@ -123,3 +123,25 @@ async def test_a_case_does_not_wait_for_a_responsible_person_nobody_called(datab
     async with database.unit_of_work() as session:
         assert (await session.scalar(select(Case))).state is CaseState.INVESTIGATING
     assert "waiting_owner is only for a case a call went out for" in str(model.requests)
+
+
+async def test_a_responsible_person_who_asks_is_not_called_the_others_are(database, httpx_mock, model):
+    bot = await harness(database, httpx_mock, model)
+    bot.provider.account("sub-ivan", "ivan", ["support", "owner"])
+    await bot.bind(504, "sub-ivan", "ivan_owner")
+    model.replies += escalating()
+    bot.telegram.private(OLEG, "client@example.com charged, nothing came")
+    await bot.step()
+    assert not any("A responsible person is needed." in text for text in bot.telegram.texts(OLEG))
+    to_other = bot.telegram.texts(504)
+    assert len(to_other) == 1 and "Asked by oleg." in to_other[0]
+
+
+async def test_the_only_responsible_person_asking_is_told_there_is_nobody_else(database, httpx_mock, model):
+    bot = await harness(database, httpx_mock, model)
+    model.replies += escalating()
+    bot.telegram.private(OLEG, "client@example.com charged, nothing came")
+    await bot.step()
+    texts = bot.telegram.texts(OLEG)
+    assert not any("A responsible person is needed." in text for text in texts)
+    assert any("you are the only responsible person" in text for text in texts)

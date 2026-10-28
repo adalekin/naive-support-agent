@@ -92,3 +92,12 @@ def test_a_label_the_case_does_not_know_stays_as_written():
     from internal.privacy.render import TextBuilder
 
     assert TextBuilder(LabelMap()).revealed("<<email_9>>").build().text == "<<email_9>>"
+
+
+def test_an_email_written_in_other_letter_case_is_the_same_label():
+    # Mail services do not tell Anya.Top@ from anya.top@: a client writes one, the database holds the other.
+    p = pseudonymizer()
+    assert p.mask_text("Anya.Top1@Yandex.ru") == p.mask_text("anya.top1@yandex.ru") == "<<email_1>>"
+    assert p.labels.value("<<email_1>>") == "Anya.Top1@Yandex.ru"
+    again = pseudonymizer(p.labels.to_dict())
+    assert again.mask_text("ANYA.TOP1@YANDEX.RU") == "<<email_1>>"

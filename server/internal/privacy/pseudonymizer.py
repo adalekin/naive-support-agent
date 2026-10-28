@@ -45,15 +45,23 @@ class LabelMap:
 
     def __init__(self, labels: dict[str, str] | None = None) -> None:
         self._values: dict[str, str] = dict(labels or {})
-        self._labels: dict[str, str] = {value: label for label, value in self._values.items()}
+        self._labels: dict[str, str] = {
+            self._key(LABEL.fullmatch(label).group(1), value): label for label, value in self._values.items()
+        }
+
+    @staticmethod
+    def _key(kind: str, value: str) -> str:
+        # Mail services do not tell letter case apart in an address: one person, one label.
+        return value.casefold() if kind == "email" else value
 
     def label(self, kind: str, value: str) -> str:
-        if value in self._labels:
-            return self._labels[value]
+        key = self._key(kind, value)
+        if key in self._labels:
+            return self._labels[key]
         count = sum(1 for label in self._values if label.startswith(f"<<{kind}_"))
         label = f"<<{kind}_{count + 1}>>"
         self._values[label] = value
-        self._labels[value] = label
+        self._labels[key] = label
         return label
 
     def value(self, label: str) -> str | None:
