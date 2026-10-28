@@ -7,13 +7,14 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from internal.entity import MessageRole
-from internal.telegram import Keyboard, Text
+from internal.telegram import Keyboard, RichMessage, Text
 
 
 @dataclass(frozen=True)
 class Send:
     chat_id: int
-    text: Text
+    #: A formatted message for answers and calls, plain text with entities for the bot's own words.
+    text: Text | RichMessage
     reply_to: int | None = None
     thread_id: int | None = None
     keyboard: Keyboard | None = None

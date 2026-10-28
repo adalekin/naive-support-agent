@@ -24,6 +24,12 @@ def escalating(cause=None):
     return [*steps, *answer("Called the responsible person.", state="waiting_owner")]
 
 
+def called(message):
+    """The people a call mentions by their Telegram number, in its first line."""
+    first = message["rich_message"]["blocks"][0]["text"]
+    return [piece["user"]["id"] for piece in first if isinstance(piece, dict) and piece["type"] == "text_mention"]
+
+
 @pytest.fixture
 def model():
     return FakeModel()
@@ -44,7 +50,7 @@ async def test_escalation_in_a_group_mentions_the_responsible_person_in_the_thre
     await bot.step()
     call = next(body for body in bot.telegram.sent_messages() if "A responsible person is needed." in body["text"])
     assert call["chat_id"] == GROUP and call["reply_parameters"]["message_id"] == asked
-    assert {"type": "text_mention", "offset": 0, "length": 4, "user": {"id": OLEG}} in call["entities"]
+    assert called(call) == [OLEG]
     for part in ("Complaint", "Checked", "Found", "Question", "client@example.com", "Refund or rerun?"):
         assert part in call["text"]
 
@@ -168,7 +174,7 @@ async def test_the_escalation_role_alone_is_called_and_takes_the_thread(database
     asked = bot.telegram.message(GROUP, ANNA, "@assistant_test_bot client@example.com charged, nothing came")
     await bot.step()
     call = next(body for body in bot.telegram.sent_messages() if "A responsible person is needed." in body["text"])
-    assert {"type": "text_mention", "offset": 0, "length": 4, "user": {"id": 504}} in call["entities"]
+    assert called(call) == [504]
     model.replies += [
         reply(tool_use("submit_answer", {"kind": "reply", "text": "noted", "attachments": [], **NO_PARTS})),
         reply({"type": "text", "text": ""}, stop_reason="end_turn"),

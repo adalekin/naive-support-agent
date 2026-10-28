@@ -54,7 +54,16 @@ async def test_staff_with_the_role_gets_the_case_taken_and_answered(bot, model, 
     sent = bot.telegram.sent_messages()
     assert sent[0]["text"] == "On it." and sent[0]["reply_parameters"]["message_id"] == asked
     assert sent[1]["text"] == "The payment of client@example.com was declined by the bank."
-    assert sent[1]["entities"] == [{"type": "spoiler", "offset": 15, "length": 18}]
+    assert sent[1]["rich_message"]["blocks"] == [
+        {
+            "type": "paragraph",
+            "text": [
+                "The payment of ",
+                {"type": "spoiler", "text": "client@example.com"},
+                " was declined by the bank.",
+            ],
+        }
+    ]
     assert sent[1]["reply_parameters"]["message_id"] == asked
     assert "inline_keyboard" in sent[1]["reply_markup"]
     entries = await journal(database, JournalKind.REQUEST)

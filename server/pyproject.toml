@@ -12,6 +12,7 @@ dependencies = [
     "httpx2>=2.16.0",
     "httpx[socks]>=0.28.1",
     "loguru>=0.7.3",
+    "markdown-it-py>=4.2.0",
     "mcp>=2.3.0",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.1",

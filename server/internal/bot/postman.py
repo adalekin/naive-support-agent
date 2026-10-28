@@ -3,7 +3,7 @@ from loguru import logger
 from internal.bot.outbox import AnswerPress, ChangeKeyboard, Leave, Outbox, Send, SendMedia
 from internal.db import Database
 from internal.repository import CaseRepository
-from internal.telegram import ChatClosed, TelegramGateway, TelegramUnavailable
+from internal.telegram import ChatClosed, RichMessage, TelegramGateway, TelegramUnavailable, Text
 
 
 class Postman:
@@ -20,9 +20,15 @@ class Postman:
         for reply in outbox.replies:
             try:
                 match reply:
-                    case Send():
+                    case Send(text=RichMessage() as rich):
+                        number = await self._telegram.send_rich(
+                            reply.chat_id, rich, reply_to=reply.reply_to, thread_id=reply.thread_id,
+                            keyboard=reply.keyboard,
+                        )  # fmt: skip
+                        await self._remember(reply.chat_id, number, reply.case_id, reply)
+                    case Send(text=Text() as text):
                         numbers = await self._telegram.send_message(
-                            reply.chat_id, reply.text, reply_to=reply.reply_to, thread_id=reply.thread_id,
+                            reply.chat_id, text, reply_to=reply.reply_to, thread_id=reply.thread_id,
                             keyboard=reply.keyboard,
                         )  # fmt: skip
                         for number in numbers:

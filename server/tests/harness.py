@@ -22,7 +22,7 @@ from internal.crypto import TokenCipher
 from internal.repository import StaffRepository
 from internal.sources.attachments import AttachmentReader
 from internal.sources.base import Source, SourceRegistry, ToolOutput, ToolSpec
-from internal.telegram import MembershipChanged, Pressed, Said, TelegramGateway
+from internal.telegram import MembershipChanged, Pressed, RichMessage, Said, TelegramGateway
 from internal.words import Words
 from tests.conftest import TEST_ENVIRONMENT
 from tests.fake_model import FakeModel
@@ -48,6 +48,10 @@ class Database(Source):
         return ToolOutput(json.dumps(self.rows))
 
 
+#: The methods that send a message with text.
+MESSAGES = ("sendMessage", "sendRichMessage")
+
+
 class FakeTelegram:
     """The Bot API: updates handed out once, every sent message kept."""
 
@@ -65,8 +69,11 @@ class FakeTelegram:
             offset = body.get("offset") or 0
             ready = [update for update in self.updates if update["update_id"] >= offset]
             return httpx.Response(200, json={"ok": True, "result": ready})
+        if method == "sendRichMessage":
+            # Kept with its plain text too, so a test reads an answer the same way as any message.
+            body["text"] = RichMessage(tuple(body["rich_message"]["blocks"])).plain()
         self.sent.append((method, body))
-        if method in ("sendMessage", "sendPhoto", "sendVideo"):
+        if method in ("sendMessage", "sendRichMessage", "sendPhoto", "sendVideo"):
             number = next(self._numbers)
             body["sent_as"] = number
             return httpx.Response(200, json={"ok": True, "result": {"message_id": number}})
@@ -121,7 +128,7 @@ class FakeTelegram:
         return [
             body["text"]
             for method, body in self.sent
-            if method == "sendMessage" and (chat_id is None or body["chat_id"] == chat_id)
+            if method in MESSAGES and (chat_id is None or body["chat_id"] == chat_id)
         ]
 
     def number_of(self, text_start: str) -> int:
@@ -132,7 +139,7 @@ class FakeTelegram:
         return {"message_id": message_id, "chat": {"id": chat_id, "type": "supergroup"}, "date": 1}
 
     def sent_messages(self) -> list[dict[str, Any]]:
-        return [body for method, body in self.sent if method == "sendMessage"]
+        return [body for method, body in self.sent if method in MESSAGES]
 
 
 class Harness:

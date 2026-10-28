@@ -21,6 +21,7 @@ from internal.db import Database
 from internal.entity import Case, CaseState, Incident, JournalEntry, JournalKind
 from internal.privacy.pseudonymizer import LABEL, LabelMap
 from internal.privacy.render import TextBuilder
+from internal.privacy.rich import RichMessageBuilder
 from internal.repository import CaseRepository, IncidentRepository, Journal
 from internal.sources.base import SourceGateway
 from internal.telegram import Text
@@ -301,24 +302,21 @@ class CaseCommands:
         context = self.context
         words = context.words
 
-        def body(builder: TextBuilder) -> TextBuilder:
-            builder.styled("bold", words.say("escalation"))
+        def body(builder: RichMessageBuilder) -> RichMessageBuilder:
+            builder.heading(words.say("escalation"), size=3)
             for key, field_name in (
                 ("escalation_complaint", "complaint"),
                 ("escalation_checked", "checked"),
                 ("escalation_found", "found"),
                 ("escalation_question", "question"),
             ):
-                builder.plain("\n\n").styled("bold", words.say(key)).plain("\n").revealed(data[field_name])
+                builder.heading(words.say(key)).markdown(data[field_name])
             return builder
 
         if not context.case.private:
-            builder = TextBuilder(context.labels)
-            for index, owner in enumerate(owners):
-                if index:
-                    builder.plain(", ")
-                builder.styled("text_mention", owner.binding.account_name, user_id=owner.binding.telegram_user_id)
-            builder.plain("\n")
+            builder = RichMessageBuilder(context.labels).mentions(
+                [(owner.binding.telegram_user_id, owner.binding.account_name) for owner in owners]
+            )
             return [
                 Send(
                     context.case.chat_id,
@@ -331,8 +329,8 @@ class CaseCommands:
         # A case of a private chat: each responsible person gets a private message, with who asked.
         messages = []
         for owner in owners:
-            builder = body(TextBuilder(context.labels))
-            builder.plain("\n\n").plain(words.say("escalation_asked_by", account=context.staff.binding.account_name))
+            builder = body(RichMessageBuilder(context.labels))
+            builder.paragraph(words.say("escalation_asked_by", account=context.staff.binding.account_name))
             messages.append(Send(owner.binding.telegram_user_id, builder.build(), case_id=context.case.id))
         return messages
 

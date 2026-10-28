@@ -232,3 +232,20 @@ async def test_long_answer_goes_as_several_messages_with_buttons_under_the_last(
     assert numbers == [1, 2]
     first, second = (json.loads(request.content) for request in httpx_mock.get_requests())
     assert "reply_markup" not in first and "reply_markup" in second
+
+
+async def test_rich_message_goes_with_reply_topic_buttons_and_no_entity_detection(httpx_mock):
+    from internal.telegram import RichMessage
+
+    httpx_mock.add_response(url=f"{BOT}/sendRichMessage", json=ok({"message_id": 56}))
+    gateway = TelegramGateway("1234:test-token", None)
+    blocks = ({"type": "paragraph", "text": [{"type": "spoiler", "text": "a@b.c"}]},)
+    number = await gateway.send_rich(
+        -1001, RichMessage(blocks), reply_to=10, thread_id=3, keyboard=[[Button("ok", "f:1:up")]]
+    )
+    assert number == 56
+    sent = json.loads(httpx_mock.get_request().content)
+    assert sent["rich_message"] == {"blocks": list(blocks), "skip_entity_detection": True}
+    assert sent["reply_parameters"] == {"message_id": 10, "allow_sending_without_reply": True}
+    assert sent["message_thread_id"] == 3
+    assert sent["reply_markup"] == {"inline_keyboard": [[{"text": "ok", "callback_data": "f:1:up"}]]}

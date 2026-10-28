@@ -137,6 +137,31 @@ class Text:
 
 
 @dataclass(frozen=True)
+class RichMessage:
+    """A formatted message of blocks (``sendRichMessage``): headings, lists, tables, quotes."""
+
+    blocks: tuple[dict[str, Any], ...]
+
+    def plain(self) -> str:
+        """The text of the blocks without their formatting."""
+        return "\n".join(_plain(block) for block in self.blocks)
+
+
+def _plain(node: Any) -> str:
+    if isinstance(node, str):
+        return node
+    if isinstance(node, list):
+        return "".join(_plain(item) for item in node)
+    if node.get("type") == "table":
+        return "\n".join(" | ".join(_plain(cell.get("text", "")) for cell in row) for row in node["cells"])
+    if node.get("type") == "list":
+        return "\n".join("- " + "\n".join(_plain(block) for block in item["blocks"]) for item in node["items"])
+    if "blocks" in node:
+        return "\n".join(_plain(block) for block in node["blocks"])
+    return _plain(node.get("text", ""))
+
+
+@dataclass(frozen=True)
 class Update:
     id: int
     #: What the update says, when the assistant has a use for it.
@@ -188,6 +213,25 @@ class TelegramGateway:
             sent = await self._call("sendMessage", json=payload)
             numbers.append(sent["message_id"])
         return numbers
+
+    async def send_rich(
+        self,
+        chat_id: int,
+        message: RichMessage,
+        *,
+        reply_to: int | None = None,
+        thread_id: int | None = None,
+        keyboard: Keyboard | None = None,
+    ) -> int:
+        """Send a formatted message; returns its number in the chat."""
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            # Emails and phones are hidden by the assistant; the API must not turn them into links.
+            "rich_message": {"blocks": list(message.blocks), "skip_entity_detection": True},
+        }
+        self._place(payload, reply_to, thread_id, keyboard)
+        sent = await self._call("sendRichMessage", json=payload)
+        return sent["message_id"]
 
     async def send_media(
         self,
