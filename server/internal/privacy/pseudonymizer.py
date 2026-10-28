@@ -19,6 +19,27 @@ PHONE = re.compile(
 LABEL = re.compile(r"<<([a-z]+)_(\d+)>>")
 
 
+def _python_repr(text: str) -> Any:
+    """What a server prints with Python's repr: literals as they are, every call or name as its source text.
+
+    Rows of a database come with ``datetime.datetime(...)`` and ``Decimal('1.5')`` in them, which
+    ``ast.literal_eval`` refuses; nothing here is evaluated.
+    """
+    return _literal(ast.parse(text, mode="eval").body)
+
+
+def _literal(node: ast.expr) -> Any:
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.List | ast.Tuple | ast.Set):
+        return [_literal(item) for item in node.elts]
+    if isinstance(node, ast.Dict):
+        return {_literal(key): _literal(value) for key, value in zip(node.keys, node.values, strict=True)}
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub) and isinstance(node.operand, ast.Constant):
+        return -node.operand.value
+    return ast.unparse(node)
+
+
 class LabelMap:
     """Label to value for one case. The same value always gets the same label."""
 
@@ -68,7 +89,7 @@ class Pseudonymizer:
         """A source answers in text that often holds a structure: masked by its fields when it does."""
         stripped = text.strip()
         if stripped[:1] in ("{", "["):
-            for parse in (json.loads, ast.literal_eval):
+            for parse in (json.loads, _python_repr):
                 try:
                     data = parse(stripped)
                 except (ValueError, SyntaxError, RecursionError):

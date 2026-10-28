@@ -32,7 +32,7 @@ All `*.md` files are joined in name order and open the system prompt. `dev/instr
 
 ## Personal data
 
-Emails and phone numbers are swapped for labels in every text before it reaches the model. Names and payment data are swapped too when they sit in the fields `sources.toml` lists. People see the real values in the bot's answers under a spoiler, which opens on a tap. Pictures and videos of clients are sent under a spoiler as well. One gap remains: names written inside a client's own text, and the client's files, go to the model as they are.
+Emails and phone numbers are swapped for labels in every text before it reaches the model. Names and payment data are swapped too when they sit in the fields `sources.toml` lists. People see the real values in the bot's answers under a spoiler, which opens on a tap. Pictures and videos of clients are sent under a spoiler as well. Two gaps remain. Names written inside a client's own text, and the client's files, go to the model as they are. And a field is known by its name, so a query that renames a personal column or joins it into another one returns its values unmasked: the instructions of an installation whose sources take SQL should tell the model to select those columns under their own names.
 
 In the assistant's database, the conversation of a case, its labels and the messages waiting to be handled are encrypted with `ENCRYPTION_KEY`, as are the staff's tokens. A case nobody worked on for `CASE_RETENTION_DAYS` is deleted with all of that. The journal keeps who asked about which client and when. A scheduled check counts as work, so a case that waits for a fix stays. Changing the key makes the stored cases and bindings unreadable.
 

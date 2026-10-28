@@ -39,6 +39,19 @@ def test_names_and_payment_data_are_masked_by_the_source_fields():
     assert "a@b.co" not in json.dumps(masked)
 
 
+def test_names_are_masked_in_rows_with_dates_and_numbers_printed_by_python():
+    # A database server prints its rows as Python reprs: datetime and Decimal are calls there, not literals.
+    text = (
+        "[{'id': 7, 'full_name': 'Иван Петров', 'created_at': datetime.datetime(2025, 9, 17, 22, 3, 14,"
+        " tzinfo=zoneinfo.ZoneInfo(key='GMT')), 'amount': Decimal('990.50')}]"
+    )
+    masked = json.loads(pseudonymizer().mask_source_text(text))
+    assert "Иван Петров" not in json.dumps(masked, ensure_ascii=False)
+    assert masked[0]["full_name"].startswith("<<pd_")
+    assert masked[0]["created_at"] == "datetime.datetime(2025, 9, 17, 22, 3, 14, tzinfo=zoneinfo.ZoneInfo(key='GMT'))"
+    assert masked[0]["amount"] == "Decimal('990.50')"
+
+
 def test_arguments_of_a_call_get_the_values_back():
     p = pseudonymizer()
     label = p.mask_text("client@example.com")
