@@ -6,6 +6,7 @@ is refused on three levels, each on its own: the installation gives read-only ac
 gateway lets through only the tools the installation listed, and no adapter has a way to write.
 """
 
+import asyncio
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -53,6 +54,11 @@ class Source(ABC):
 
     async def close(self) -> None:
         pass
+
+    @property
+    def alive(self) -> bool:
+        """Whether a started source still holds its connection; one that holds none has none to lose."""
+        return True
 
     @abstractmethod
     async def list_tools(self) -> list[ToolSpec]: ...
@@ -116,16 +122,19 @@ class SourceRegistry:
         self._tools: dict[str, dict[str, ToolSpec]] = {}
         #: Name to why it is unavailable.
         self.down: dict[str, str] = {}
+        #: A case and the periodic retry may both start a source that is down: one at a time.
+        self._restarting = asyncio.Lock()
 
     async def start(self) -> None:
         for source in self._sources.values():
             await self._start(source)
 
     async def restart_down(self) -> None:
-        for source in self._sources.values():
-            if source.name in self.down or not source.alive:
-                await source.close()
-                await self._start(source)
+        async with self._restarting:
+            for source in self._sources.values():
+                if source.name in self.down or not source.alive:
+                    await source.close()
+                    await self._start(source)
 
     async def _start(self, source: Source) -> None:
         try:

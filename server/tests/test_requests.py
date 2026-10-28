@@ -374,3 +374,30 @@ async def test_only_a_person_with_the_role_is_told_aggregate_figures_are_allowed
     first_of_anna, first_of_boss = model.requests[0], model.requests[3]
     assert ANALYTICS_NOTE not in json.dumps(first_of_anna)
     assert ANALYTICS_NOTE in json.dumps(first_of_boss)
+
+
+async def test_a_source_down_since_the_start_is_tried_again_before_a_case(database, httpx_mock, model, monkeypatch):
+    # A server beside the assistant may open its port after the assistant first knocks.
+    from internal.sources.base import SourceUnavailable
+    from tests.harness import Database
+
+    ready = False
+    original = Database.start
+
+    async def start(self):
+        if not ready:
+            raise SourceUnavailable("connection refused")
+        await original(self)
+
+    monkeypatch.setattr(Database, "start", start)
+    bot = await Harness(database, httpx_mock, model).start()
+    await bot.bind(ANNA, "sub-anna", "anna_s")
+    assert bot.registry.unavailable_note() is not None
+
+    ready = True
+    model.replies += answer("Checked in the database.")
+    bot.telegram.message(GROUP, ANNA, "@assistant_test_bot client@example.com cannot pay")
+    await bot.step()
+    offered = [tool["name"] for tool in model.requests[-3]["tools"]]
+    assert "db__query" in offered
+    assert bot.registry.unavailable_note() is None

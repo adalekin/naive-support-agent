@@ -169,6 +169,9 @@ class CaseWorker:
             )
 
         request = await self._request_input(turn, case, pseudonymizer)
+        # A source down since the start or since a failure gets one more try before the case,
+        # not only on the periodic retry: the case would otherwise go without it.
+        await self._registry.restart_down()
         gateway = self._registry.gateway(pseudonymizer)
         context = CaseContext(
             database=self._database,
