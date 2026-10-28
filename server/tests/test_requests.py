@@ -1,4 +1,5 @@
 import datetime
+import json
 
 import pytest
 from sqlalchemy import select, update
@@ -356,3 +357,20 @@ async def test_a_case_that_waits_for_a_fix_is_kept_by_its_checks(bot, model, dat
     await bot.follow_up.tick()
     await bot.worker.drain_all()
     assert await RetentionSweeper(database, 30).sweep(datetime.datetime.now(datetime.UTC)) == 0
+
+
+async def test_only_a_person_with_the_role_is_told_aggregate_figures_are_allowed(database, httpx_mock, model):
+    from internal.bot.worker import ANALYTICS_NOTE
+
+    bot = await Harness(database, httpx_mock, model).start()
+    bot.provider.account("sub-boss", "boss", ["support"], admin_roles=["admin"])
+    await bot.bind(ANNA, "sub-anna", "anna_s")
+    await bot.bind(600, "sub-boss", "boss")
+    model.replies += answer("Refused.") + answer("990 today.")
+    bot.telegram.private(ANNA, "what is the revenue today?")
+    await bot.step()
+    bot.telegram.private(600, "what is the revenue today?")
+    await bot.step()
+    first_of_anna, first_of_boss = model.requests[0], model.requests[3]
+    assert ANALYTICS_NOTE not in json.dumps(first_of_anna)
+    assert ANALYTICS_NOTE in json.dumps(first_of_boss)

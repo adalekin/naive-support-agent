@@ -41,6 +41,13 @@ OPERATOR_NOTES = {
 }
 
 
+#: Said to the model in every turn of a person who may ask for aggregate figures (``case-investigation``).
+ANALYTICS_NOTE = (
+    "The person who asks holds the role for aggregate questions: answer them with aggregate figures over the "
+    "data (totals, counts, breakdowns by day or plan), never naming a client or showing a client's data."
+)
+
+
 @dataclass(frozen=True)
 class RequestInput:
     content: list[dict[str, Any]]
@@ -182,6 +189,8 @@ class CaseWorker:
         note = OPERATOR_NOTES.get(turn.kind)
         if note is not None and turn.kind is TurnKind.FOLLOW_UP:
             note = note.format(waiting_for=case.waiting_for)
+        if staff.may_analyze:
+            note = f"{note}\n\n{ANALYTICS_NOTE}" if note else ANALYTICS_NOTE
         unavailable = self._registry.unavailable_note()
         if unavailable is not None:
             note = f"{note}\n\n{unavailable}" if note else unavailable

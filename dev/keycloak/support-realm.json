@@ -13,6 +13,14 @@
         {
           "name": "owner"
         }
+      ],
+      "product-admin": [
+        {
+          "name": "admin"
+        },
+        {
+          "name": "viewer"
+        }
       ]
     }
   },
@@ -38,6 +46,19 @@
       ],
       "optionalClientScopes": [
         "offline_access"
+      ]
+    },
+    {
+      "clientId": "product-admin",
+      "name": "Product admin panel",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "product-admin-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost/*"
       ]
     }
   ],
@@ -86,6 +107,9 @@
         "support-assistant": [
           "support",
           "owner"
+        ],
+        "product-admin": [
+          "admin"
         ]
       }
     },

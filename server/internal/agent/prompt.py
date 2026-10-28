@@ -38,6 +38,8 @@ client; show no data of the clients found. A question about how the product beha
 client: look into it in the code, the errors and the interface.
 - Do not show data of other clients, and do not pull lists across clients, unless the answer \
 about this case needs a number (how many clients a failure touched): then give the number only.
+- Aggregate figures a case does not need (revenue, counts, breakdowns) go only to a person a \
+system message says holds the role for them; anyone else is refused.
 - When the contact the client wrote from differs from the contacts of the account they ask \
 about, and the sources have those contacts, warn the person who asked.
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from loguru import logger
 from sqlalchemy import delete, select, update
 
-from internal.access.oidc import GrantRejected, Identity, OidcProvider
+from internal.access.oidc import GrantRejected, Identity, OidcProvider, Role
 from internal.crypto import InvalidToken, TokenCipher
 from internal.db import Database
 from internal.entity import JournalKind, StaffBinding
@@ -20,6 +20,8 @@ class Staff:
     identity: Identity
     may_use: bool
     is_owner: bool
+    #: May ask for aggregate figures over the data: totals and breakdowns, never lists of clients.
+    may_analyze: bool = False
 
 
 class AccessGuard:
@@ -33,13 +35,20 @@ class AccessGuard:
     """
 
     def __init__(
-        self, database: Database, provider: OidcProvider, cipher: TokenCipher, role_support: str, role_owner: str
+        self,
+        database: Database,
+        provider: OidcProvider,
+        cipher: TokenCipher,
+        role_support: Role,
+        role_owner: Role,
+        role_analytics: Role,
     ) -> None:
         self._database = database
         self._provider = provider
         self._cipher = cipher
         self._role_support = role_support
         self._role_owner = role_owner
+        self._role_analytics = role_analytics
         self._locks: defaultdict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     async def check(self, telegram_user_id: int) -> Staff | None:
@@ -91,8 +100,9 @@ class AccessGuard:
         return Staff(
             binding=binding,
             identity=identity,
-            may_use=self._role_support in identity.roles,
-            is_owner=self._role_owner in identity.roles,
+            may_use=identity.holds(self._role_support),
+            is_owner=identity.holds(self._role_owner),
+            may_analyze=identity.holds(self._role_analytics),
         )
 
     async def _unbind(self, binding: StaffBinding, reason: str) -> None:

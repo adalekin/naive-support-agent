@@ -26,7 +26,7 @@ from internal.telegram import MembershipChanged, Pressed, Said, TelegramGateway
 from internal.words import Words
 from tests.conftest import TEST_ENVIRONMENT
 from tests.fake_model import FakeModel
-from tests.fakes import ISSUER, FakeProvider
+from tests.fakes import CLAIMS, ISSUER, ROLES, FakeProvider
 
 BOT = "https://api.telegram.org/bot1234:test-token"
 GROUP = -1001
@@ -146,10 +146,10 @@ class Harness:
         self.model = model
         self.source = Database()
         gateway = TelegramGateway("1234:test-token", None)
-        oidc = OidcProvider(ISSUER, "support-assistant", "client-secret", "resource_access.support-assistant.roles")
+        oidc = OidcProvider(ISSUER, "support-assistant", "client-secret", CLAIMS)
         words = Words("en")
-        self.guard = AccessGuard(database, oidc, cipher, "support", "owner")
-        self.login = DeviceLoginProcess(oidc, self.guard, cipher, words, groups, "support")
+        self.guard = AccessGuard(database, oidc, cipher, *ROLES)
+        self.login = DeviceLoginProcess(oidc, self.guard, cipher, words, groups, ROLES[0])
         self.registry = SourceRegistry([self.source], {"db": ["query"]})
         self.postman = Postman(gateway, database)
         client = model.client()

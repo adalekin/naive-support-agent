@@ -1,7 +1,8 @@
 # Development environment: `docker compose up -d` from the repository root.
 #
 #   provider   http://keycloak.localhost:8086, realm "support", client "support-assistant"
-#   sign-in    anna (support), oleg (support, owner), eve (no role); the password equals the user name
+#   sign-in    anna (support), oleg (support, owner; admin of the client product-admin), eve (no role);
+#              the password equals the user name
 #
 # Everything here is for development: fixed credentials, a test identity provider, data in local volumes.
 name: naive-support-agent

@@ -18,6 +18,7 @@ from internal.sources.base import Source, SourceRegistry, ToolOutput, ToolSpec
 from internal.words import Words
 from tests.conftest import TEST_ENVIRONMENT
 from tests.fake_model import FakeModel, reply, tool_use
+from tests.fakes import CLAIMS, ROLES
 
 NOW = datetime.datetime(2026, 10, 27, 12, 0, tzinfo=datetime.UTC)
 cipher = TokenCipher(TEST_ENVIRONMENT["ENCRYPTION_KEY"])
@@ -59,14 +60,14 @@ async def run_turn(database, registry, model, text, *, owner=False, budget=100_0
     labels = LabelMap()
     pseudonymizer = Pseudonymizer(INSTRUCTIONS.personal_fields, labels)
     masked = pseudonymizer.mask_text(text)
-    staff = Staff(binding, Identity(f"sub-{root}", "anna", frozenset({"support"})), True, owner)
+    staff = Staff(binding, Identity(f"sub-{root}", "anna", {CLAIMS[0]: frozenset({"support"})}), True, owner)
     context = CaseContext(
         database=database,
         case=case,
         staff=staff,
         labels=labels,
         gateway=registry.gateway(pseudonymizer),
-        guard=AccessGuard(database, OidcProvider("https://idp.test", "c", "s", "roles"), cipher, "support", "owner"),
+        guard=AccessGuard(database, OidcProvider("https://idp.test", "c", "s", CLAIMS), cipher, *ROLES),
         words=Words("en"),
         outbox=Outbox(),
         now=NOW,

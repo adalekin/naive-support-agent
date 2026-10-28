@@ -13,7 +13,7 @@ from internal.entity import DeviceLogin, JournalEntry, JournalKind
 from internal.repository import StaffRepository
 from internal.words import Words
 from tests.conftest import TEST_ENVIRONMENT
-from tests.fakes import ISSUER, FakeProvider
+from tests.fakes import CLAIMS, ISSUER, ROLES, FakeProvider
 
 NOW = datetime.datetime(2026, 10, 27, 12, 0, tzinfo=datetime.UTC)
 cipher = TokenCipher(TEST_ENVIRONMENT["ENCRYPTION_KEY"])
@@ -30,16 +30,16 @@ def provider(httpx_mock):
 
 @pytest.fixture
 def oidc():
-    return OidcProvider(ISSUER, "support-assistant", "client-secret", "resource_access.support-assistant.roles")
+    return OidcProvider(ISSUER, "support-assistant", "client-secret", CLAIMS)
 
 
 @pytest.fixture
 def guard(database, oidc):
-    return AccessGuard(database, oidc, cipher, "support", "owner")
+    return AccessGuard(database, oidc, cipher, *ROLES)
 
 
 def login_process(oidc, guard, groups=frozenset({-1001})):
-    return DeviceLoginProcess(oidc, guard, cipher, Words("en"), groups, "support")
+    return DeviceLoginProcess(oidc, guard, cipher, Words("en"), groups, ROLES[0])
 
 
 async def bind(database, provider, telegram_user_id, sub):
@@ -92,10 +92,9 @@ async def test_misconfigured_client_does_not_unbind_the_staff(database, provider
     await bind(database, provider, 10, "sub-anna")
     wrong = AccessGuard(
         database,
-        OidcProvider(ISSUER, "support-assistant", "wrong", "resource_access.support-assistant.roles"),
+        OidcProvider(ISSUER, "support-assistant", "wrong", CLAIMS),
         cipher,
-        "support",
-        "owner",
+        *ROLES,
     )
     with pytest.raises(ProviderUnavailable):
         await check(database, wrong, 10)
@@ -206,3 +205,11 @@ async def test_a_rotated_token_is_kept_even_if_the_request_rolls_back(database, 
             raise Rollback
     # The old token is dead at the provider; the saved one still works.
     assert (await check(database, guard, 10)).may_use
+
+
+async def test_the_role_for_aggregate_questions_is_read_from_another_application(database, provider, guard):
+    provider.account("sub-boss", "boss", ["support"], admin_roles=["admin"])
+    await bind(database, provider, 40, "sub-boss")
+    await bind(database, provider, 10, "sub-anna")
+    assert (await check(database, guard, 40)).may_analyze
+    assert not (await check(database, guard, 10)).may_analyze

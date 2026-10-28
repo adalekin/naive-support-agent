@@ -18,6 +18,13 @@ def test_no_start_without_the_provider(environment, monkeypatch, name):
         load_settings()
 
 
+@pytest.mark.parametrize("name", ["ROLE_ANALYTICS", "ANALYTICS_ROLES_CLAIM"])
+def test_no_start_without_the_role_for_aggregate_questions(environment, monkeypatch, name):
+    monkeypatch.delenv(name)
+    with pytest.raises(ConfigurationError, match=name):
+        load_settings()
+
+
 def test_no_start_without_the_owner_role(environment, monkeypatch):
     monkeypatch.delenv("ROLE_OWNER")
     with pytest.raises(ConfigurationError, match="ROLE_OWNER"):

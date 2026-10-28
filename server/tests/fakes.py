@@ -6,9 +6,18 @@ from urllib.parse import parse_qs
 
 import httpx
 
+from internal.access.oidc import Role
+
 ISSUER = "https://idp.test/realms/support"
 TOKEN_URL = f"{ISSUER}/protocol/openid-connect/token"
 DEVICE_URL = f"{ISSUER}/protocol/openid-connect/auth/device"
+#: Access, responsible person, aggregate questions: the last is a role of the admin panel's client.
+ROLES = (
+    Role("resource_access.support-assistant.roles", "support"),
+    Role("resource_access.support-assistant.roles", "owner"),
+    Role("resource_access.product-admin.roles", "admin"),
+)
+CLAIMS = ["resource_access.support-assistant.roles", "resource_access.product-admin.roles"]
 
 
 def jwt(claims: dict) -> str:
@@ -18,8 +27,11 @@ def jwt(claims: dict) -> str:
     return f"{part({'alg': 'RS256'})}.{part(claims)}.c2ln"
 
 
-def access_token(sub: str, name: str, roles: list[str]) -> str:
-    return jwt({"sub": sub, "preferred_username": name, "resource_access": {"support-assistant": {"roles": roles}}})
+def access_token(sub: str, name: str, roles: list[str], admin_roles: list[str] | None = None) -> str:
+    access = {"support-assistant": {"roles": roles}}
+    if admin_roles:
+        access["product-admin"] = {"roles": admin_roles}
+    return jwt({"sub": sub, "preferred_username": name, "resource_access": access})
 
 
 class FakeProvider:
@@ -37,8 +49,8 @@ class FakeProvider:
         httpx_mock.add_callback(self._token, url=TOKEN_URL, is_reusable=True, is_optional=True)
         httpx_mock.add_callback(self._device, url=DEVICE_URL, is_reusable=True, is_optional=True)
 
-    def account(self, sub: str, name: str, roles: list[str]) -> None:
-        self.accounts[sub] = {"name": name, "roles": roles, "enabled": True}
+    def account(self, sub: str, name: str, roles: list[str], admin_roles: list[str] | None = None) -> None:
+        self.accounts[sub] = {"name": name, "roles": roles, "admin_roles": admin_roles, "enabled": True}
 
     def issue(self, sub: str) -> str:
         self._serial += 1
@@ -58,7 +70,7 @@ class FakeProvider:
         return httpx.Response(
             200,
             json={
-                "access_token": access_token(sub, account["name"], account["roles"]),
+                "access_token": access_token(sub, account["name"], account["roles"], account["admin_roles"]),
                 "refresh_token": self.issue(sub),
             },
         )

@@ -7,6 +7,7 @@ and nothing here knows which product the provider is.
 import asyncio
 import base64
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,12 +37,25 @@ class DeviceCode:
 
 
 @dataclass(frozen=True)
+class Role:
+    """A role as the provider lists it: where in the access token, and under what name."""
+
+    #: A dotted path to a list of roles, e.g. ``resource_access.<client>.roles``.
+    claim: str
+    name: str
+
+
+@dataclass(frozen=True)
 class Identity:
     """Who the tokens belong to and what they may do, read from the access token."""
 
     subject: str
     account_name: str
-    roles: frozenset[str]
+    #: The roles found at each place the installation named.
+    roles: dict[str, frozenset[str]]
+
+    def holds(self, role: Role) -> bool:
+        return role.name in self.roles.get(role.claim, frozenset())
 
 
 @dataclass(frozen=True)
@@ -60,10 +74,10 @@ class Pending:
 
 
 class OidcProvider:
-    def __init__(self, issuer: str, client_id: str, client_secret: str, roles_claim: str) -> None:
+    def __init__(self, issuer: str, client_id: str, client_secret: str, roles_claims: Iterable[str]) -> None:
         self._issuer = issuer
         self._client = {"client_id": client_id, "client_secret": client_secret}
-        self._roles_path = roles_claim.split(".")
+        self._roles_claims = tuple(dict.fromkeys(roles_claims))
         self._configuration: dict[str, Any] | None = None
         self._lock = asyncio.Lock()
         self._http = httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS)
@@ -128,17 +142,12 @@ class OidcProvider:
         except (IndexError, ValueError) as exc:
             raise ProviderUnavailable("The access token is not a JWT") from exc
 
-        roles: Any = claims
-        for part in self._roles_path:
-            roles = roles.get(part, {}) if isinstance(roles, dict) else {}
         if "sub" not in claims:
             raise ProviderUnavailable("The access token has no subject")
         return Identity(
             subject=claims["sub"],
             account_name=claims.get("preferred_username") or claims.get("email") or claims["sub"],
-            roles=frozenset(role for role in roles if isinstance(role, str))
-            if isinstance(roles, list)
-            else frozenset(),
+            roles={claim: _roles_at(claims, claim) for claim in self._roles_claims},
         )
 
     async def _endpoint(self, name: str) -> str:
@@ -176,3 +185,11 @@ class _OAuthError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+def _roles_at(claims: dict[str, Any], claim: str) -> frozenset[str]:
+    """The roles listed at a dotted path; none when the path leads nowhere."""
+    found: Any = claims
+    for part in claim.split("."):
+        found = found.get(part, {}) if isinstance(found, dict) else {}
+    return frozenset(role for role in found if isinstance(role, str)) if isinstance(found, list) else frozenset()

@@ -4,7 +4,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from internal.access.guard import AccessGuard
-from internal.access.oidc import GrantRejected, OidcProvider, Pending, ProviderUnavailable, Tokens
+from internal.access.oidc import GrantRejected, OidcProvider, Pending, ProviderUnavailable, Role, Tokens
 from internal.bot.outbox import Outbox
 from internal.crypto import TokenCipher
 from internal.entity import DeviceLogin, JournalKind
@@ -34,7 +34,7 @@ class DeviceLoginProcess:
         cipher: TokenCipher,
         words: Words,
         groups: frozenset[int],
-        role_support: str,
+        role_support: Role,
     ) -> None:
         self._provider = provider
         self._guard = guard
@@ -119,7 +119,7 @@ class DeviceLoginProcess:
 
     async def _finish(self, session: AsyncSession, outbox: Outbox, login: DeviceLogin, tokens: Tokens) -> None:
         identity = tokens.identity
-        if self._role_support not in identity.roles:
+        if not identity.holds(self._role_support):
             outbox.say(login.chat_id, self._words.say("login_no_role", account=identity.account_name))
             await Journal(session).write(
                 JournalKind.REFUSED, subject=identity.subject, telegram_user_id=login.telegram_user_id, reason="no_role"

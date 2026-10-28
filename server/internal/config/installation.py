@@ -5,6 +5,8 @@ from pydantic import Field, SecretStr, ValidationError, field_validator, model_v
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from sqlalchemy import URL
 
+from internal.access.oidc import Role
+
 
 class ConfigurationError(RuntimeError):
     """An installation setting is missing or invalid; the message names every such setting."""
@@ -41,6 +43,10 @@ class Settings(BaseSettings):
     ROLE_SUPPORT: str = Field(min_length=1)
     #: The role of the people the assistant calls when it has no answer.
     ROLE_OWNER: str = Field(min_length=1)
+    #: The role of the people who may ask for aggregate figures over the data (totals, breakdowns).
+    ROLE_ANALYTICS: str = Field(min_length=1)
+    #: Where the provider lists that role: it may be a role of another application, e.g. the admin panel.
+    ANALYTICS_ROLES_CLAIM: str = Field(min_length=1)
 
     ANTHROPIC_API_KEY: SecretStr
     MODEL: str = Field(min_length=1)
@@ -112,6 +118,18 @@ class Settings(BaseSettings):
             port=self.DB_PORT,
             database=self.DB_NAME,
         )
+
+    @property
+    def role_support(self) -> Role:
+        return Role(self.OIDC_ROLES_CLAIM, self.ROLE_SUPPORT)
+
+    @property
+    def role_owner(self) -> Role:
+        return Role(self.OIDC_ROLES_CLAIM, self.ROLE_OWNER)
+
+    @property
+    def role_analytics(self) -> Role:
+        return Role(self.ANALYTICS_ROLES_CLAIM, self.ROLE_ANALYTICS)
 
     @property
     def telegram_proxy_url(self) -> str | None:

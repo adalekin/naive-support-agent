@@ -34,6 +34,7 @@ from internal.agent.commands import CaseContext
 from internal.agent.prompt import system_prompt
 from internal.agent.runner import CaseAgent, TurnOutcome
 from internal.bot.outbox import Outbox, Send
+from internal.bot.worker import ANALYTICS_NOTE
 from internal.config.instructions import InstructionSet
 from internal.crypto import TokenCipher
 from internal.db import Database
@@ -240,8 +241,11 @@ async def run_case(case: EvalCase, number: int, database: Database, client: Asyn
         owner_binding = await staff_repo.by_telegram(OWNER_TELEGRAM)
         private = case.request["chat"] == "private"
         stored = await CaseRepository(session).open(STAFF_TELEGRAM if private else CHAT, number, private, "eval-staff")
-    staff = Staff(staff_binding, Identity("eval-staff", "anna", frozenset({"support"})), True, False)
-    owner = Staff(owner_binding, Identity("eval-owner", "oleg", frozenset({"support", "owner"})), True, True)
+    analytics = bool(case.request.get("analytics"))
+    staff = Staff(
+        staff_binding, Identity("eval-staff", "anna", {"roles": frozenset({"support"})}), True, False, analytics
+    )
+    owner = Staff(owner_binding, Identity("eval-owner", "oleg", {"roles": frozenset({"support", "owner"})}), True, True)
 
     labels = LabelMap()
     pseudonymizer = Pseudonymizer(instructions.personal_fields, labels)
@@ -265,7 +269,7 @@ async def run_case(case: EvalCase, number: int, database: Database, client: Asyn
         thread_id=None,
     )
     agent = CaseAgent(client, MODEL, EFFORT, 400_000, system_prompt(instructions))
-    outcome = await agent.run(context, content, None, {})
+    outcome = await agent.run(context, content, ANALYTICS_NOTE if analytics else None, {})
     await registry.close()
 
     answer = context.answer

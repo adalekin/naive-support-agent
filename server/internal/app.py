@@ -55,12 +55,14 @@ class Assistant:
             settings.OIDC_ISSUER,
             settings.OIDC_CLIENT_ID,
             settings.OIDC_CLIENT_SECRET.get_secret_value(),
-            settings.OIDC_ROLES_CLAIM,
+            [settings.OIDC_ROLES_CLAIM, settings.ANALYTICS_ROLES_CLAIM],
         )
         words = Words(settings.LOCALE)
-        self.guard = AccessGuard(self.database, self.oidc, cipher, settings.ROLE_SUPPORT, settings.ROLE_OWNER)
+        self.guard = AccessGuard(
+            self.database, self.oidc, cipher, settings.role_support, settings.role_owner, settings.role_analytics
+        )
         self.login = DeviceLoginProcess(
-            self.oidc, self.guard, cipher, words, settings.TELEGRAM_GROUPS, settings.ROLE_SUPPORT
+            self.oidc, self.guard, cipher, words, settings.TELEGRAM_GROUPS, settings.role_support
         )
 
         self.repositories: list[RepositorySource] = []
