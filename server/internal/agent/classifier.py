@@ -1,6 +1,6 @@
 import json
 
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, AsyncAnthropicGoogleCloud
 
 PROMPT = """\
 A member of the support staff wrote this message in a work chat and mentioned a colleague in it. \
@@ -20,7 +20,7 @@ SCHEMA = {
 class CaseClassifier:
     """Tells a case from talk among colleagues, for a message that called a responsible person."""
 
-    def __init__(self, client: AsyncAnthropic, model: str) -> None:
+    def __init__(self, client: AsyncAnthropic | AsyncAnthropicGoogleCloud, model: str) -> None:
         self._client = client
         self._model = model
 

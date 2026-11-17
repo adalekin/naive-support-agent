@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from anthropic import AsyncAnthropicGoogleCloud
 from sqlalchemy import text
 
 from internal.app import Assistant
@@ -30,6 +31,22 @@ async def test_model_is_reached_through_the_proxy_of_the_installation(environmen
         assert assistant.model_proxy == "socks5://user:secret@proxy.test:1080"
         assert assistant.model._client._mounts, "the HTTP client of the model has no proxy"
     finally:
+        await assistant.database.dispose()
+
+
+async def test_google_cloud_model_uses_adc_instead_of_the_direct_anthropic_key(environment, monkeypatch):
+    monkeypatch.setenv("MODEL_PROVIDER", "anthropic_google_cloud")
+    monkeypatch.setenv("ANTHROPIC_GOOGLE_CLOUD_PROJECT", "test-project")
+    monkeypatch.setenv("ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID", "test-workspace")
+    monkeypatch.delenv("ANTHROPIC_API_KEY")
+    assistant = Assistant(load_settings(), INSTRUCTIONS)
+    try:
+        assert isinstance(assistant.model, AsyncAnthropicGoogleCloud)
+        assert str(assistant.model.base_url) == (
+            "https://claude.googleapis.com/v1/projects/test-project/locations/global/workspaces/test-workspace/invoke/"
+        )
+    finally:
+        await assistant.model.close()
         await assistant.database.dispose()
 
 

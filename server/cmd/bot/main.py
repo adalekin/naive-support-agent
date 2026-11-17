@@ -22,7 +22,8 @@ def main() -> None:
     own = [
         settings.TELEGRAM_BOT_TOKEN,
         settings.OIDC_CLIENT_SECRET,
-        settings.ANTHROPIC_API_KEY,
+        *([settings.ANTHROPIC_API_KEY] if settings.ANTHROPIC_API_KEY else []),
+        *([settings.MODEL_PROXY_URL] if settings.MODEL_PROXY_URL else []),
         settings.ENCRYPTION_KEY,
         settings.DB_PASSWORD,
         *([settings.TELEGRAM_PROXY_URL] if settings.TELEGRAM_PROXY_URL else []),

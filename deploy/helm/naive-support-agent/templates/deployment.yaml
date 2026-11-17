@@ -41,6 +41,11 @@ spec:
             - name: instructions
               mountPath: /instructions
               readOnly: true
+            {{- if eq .Values.settings.model.provider "anthropic_google_cloud" }}
+            - name: google-credentials
+              mountPath: /etc/gcp
+              readOnly: true
+            {{- end }}
             # The clone of the code and the frames of videos.
             - name: scratch
               mountPath: /tmp
@@ -52,6 +57,14 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       volumes:
+        {{- if eq .Values.settings.model.provider "anthropic_google_cloud" }}
+        - name: google-credentials
+          secret:
+            secretName: {{ required "settings.model.googleCloud.existingSecret is required" .Values.settings.model.googleCloud.existingSecret }}
+            items:
+              - key: GOOGLE_APPLICATION_CREDENTIALS
+                path: key.json
+        {{- end }}
         - name: instructions
           configMap:
             name: {{ required "instructions.configMap is required" .Values.instructions.configMap }}

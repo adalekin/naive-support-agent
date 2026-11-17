@@ -50,7 +50,10 @@ class Settings(BaseSettings):
     #: Where the provider lists that role: it may be a role of another application, e.g. the admin panel.
     ANALYTICS_ROLES_CLAIM: str = Field(min_length=1)
 
-    ANTHROPIC_API_KEY: SecretStr
+    MODEL_PROVIDER: Literal["anthropic", "anthropic_google_cloud"]
+    ANTHROPIC_API_KEY: SecretStr | None = None
+    ANTHROPIC_GOOGLE_CLOUD_PROJECT: str | None = None
+    ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID: str | None = None
     #: How the service reaches the model's API: straight or through the proxy of the installation.
     #: The API refuses requests from some countries, whatever the key.
     MODEL_EGRESS: Literal["direct", "proxy"]
@@ -112,6 +115,15 @@ class Settings(BaseSettings):
             raise ValueError("TELEGRAM_PROXY_URL: required while TELEGRAM_EGRESS is 'proxy'")
         if self.TELEGRAM_EGRESS == "direct" and self.TELEGRAM_PROXY_URL is not None:
             raise ValueError("TELEGRAM_PROXY_URL: set while TELEGRAM_EGRESS is 'direct'; one of the two is wrong")
+        if self.MODEL_PROVIDER == "anthropic" and self.ANTHROPIC_API_KEY is None:
+            raise ValueError("ANTHROPIC_API_KEY: required for anthropic")
+        if self.MODEL_PROVIDER == "anthropic_google_cloud":
+            if not self.ANTHROPIC_GOOGLE_CLOUD_PROJECT or not self.ANTHROPIC_GOOGLE_CLOUD_PROJECT.strip():
+                raise ValueError("ANTHROPIC_GOOGLE_CLOUD_PROJECT: required for anthropic_google_cloud")
+            if not self.ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID or not self.ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID.strip():
+                raise ValueError("ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID: required for anthropic_google_cloud")
+            if self.MODEL_EGRESS != "direct":
+                raise ValueError("MODEL_EGRESS: anthropic_google_cloud requires direct")
         if self.MODEL_EGRESS == "proxy" and self.MODEL_PROXY_URL is None:
             raise ValueError("MODEL_PROXY_URL: required while MODEL_EGRESS is 'proxy'")
         if self.MODEL_EGRESS == "direct" and self.MODEL_PROXY_URL is not None:

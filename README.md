@@ -14,7 +14,7 @@ Nothing about the organization or its product is in this repository. Each instal
 - Sources. Two kinds are supported: MCP servers (a database, logs, an error tracker, a task tracker, a browser) and a git repository of the code. Every source is read-only, and the assistant calls only the tools the installation lists. Give each source access that can't write anyway. An MCP server is reached in one of three ways: `stdio` starts it inside the assistant's container, so it has to be in the image; `http` (streamable HTTP) and `sse` reach a server over the network, with `token_env` naming the variable that holds its bearer token if it asks for one. A server that isn't in the image can run as another container of the assistant's pod (`extraContainers` in the chart), reached at `localhost`.
 - A test account of the product, optional. It must have no money and no saved way to pay. The browser source is started signed in to it, and the assistant walks the client's path there.
 - PostgreSQL for the assistant's own data: bindings, cases, the journal.
-- An Anthropic API key.
+- Either an Anthropic API key or an Anthropic Google Cloud workspace with Google Application Default Credentials (ADC).
 
 ## Instructions
 
@@ -53,8 +53,11 @@ All settings come from the environment. None has a default, and the service won'
 | `OIDC_ROLES_CLAIM` | dotted path to the roles in an access token, e.g. `resource_access.support-assistant.roles` |
 | `ROLE_SUPPORT`, `ROLE_OWNER`, `ROLE_ESCALATION` | the role that gives access; the role of responsible people, who get the summary and the notices about new bindings; the role of the people the questions are escalated to |
 | `ROLE_ANALYTICS`, `ANALYTICS_ROLES_CLAIM` | the role of people who may ask for aggregate figures (totals, breakdowns), and where the provider lists it; it may be a role of another application, e.g. `resource_access.admin-panel.roles` |
-| `ANTHROPIC_API_KEY` | secret |
-| `MODEL_EGRESS` | `direct` or `proxy`: the model's API refuses requests from some countries, whatever the key |
+| `MODEL_PROVIDER` | required: `anthropic` or `anthropic_google_cloud`; no automatic switching |
+| `ANTHROPIC_API_KEY` | secret; required only for `anthropic` |
+| `ANTHROPIC_GOOGLE_CLOUD_PROJECT`, `ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID` | required for `anthropic_google_cloud` |
+| `GOOGLE_APPLICATION_CREDENTIALS` | path to an ADC JSON file for Google Cloud; mount it read-only |
+| `MODEL_EGRESS` | `direct` or `proxy`; Google Cloud requires `direct` and no `MODEL_PROXY_URL` |
 | `MODEL_PROXY_URL` | with `proxy`; secret, may carry a password |
 | `MODEL`, `MODEL_EFFORT` | e.g. `claude-opus-5-5`, `high` |
 | `CASE_TOKEN_BUDGET` | tokens one request about a case may spend |

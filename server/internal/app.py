@@ -7,7 +7,7 @@ from pathlib import Path
 
 from alembic.config import Config as AlembicConfig
 from alembic.script import ScriptDirectory
-from anthropic import AsyncAnthropic, DefaultAsyncHttpxClient
+from anthropic import AsyncAnthropic, AsyncAnthropicGoogleCloud, DefaultAsyncHttpxClient
 from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
@@ -86,10 +86,21 @@ class Assistant:
         self.registry = SourceRegistry(sources, allowed)
 
         self.model_proxy = settings.model_proxy_url
-        self.model = AsyncAnthropic(
-            api_key=settings.ANTHROPIC_API_KEY.get_secret_value(),
-            http_client=DefaultAsyncHttpxClient(proxy=self.model_proxy) if self.model_proxy is not None else None,
-        )
+        self.model: AsyncAnthropic | AsyncAnthropicGoogleCloud
+        if settings.MODEL_PROVIDER == "anthropic_google_cloud":
+            project = settings.ANTHROPIC_GOOGLE_CLOUD_PROJECT.strip()
+            workspace = settings.ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID.strip()
+            self.model = AsyncAnthropicGoogleCloud(
+                project=project,
+                workspace_id=workspace,
+                base_url=f"https://claude.googleapis.com/v1/projects/{project}/locations/global/workspaces/{workspace}/invoke",
+                http_client=DefaultAsyncHttpxClient(),
+            )
+        else:
+            self.model = AsyncAnthropic(
+                api_key=settings.ANTHROPIC_API_KEY.get_secret_value(),
+                http_client=DefaultAsyncHttpxClient(proxy=self.model_proxy) if self.model_proxy is not None else None,
+            )
         self.postman = Postman(self.telegram, self.database)
         self.worker = CaseWorker(
             database=self.database,
@@ -155,6 +166,7 @@ class Assistant:
             await self.registry.close()
             await self.telegram.close()
             await self.oidc.close()
+            await self.model.close()
             await self.database.dispose()
 
     async def _listen(self) -> None:

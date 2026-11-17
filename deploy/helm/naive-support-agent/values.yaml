@@ -34,6 +34,13 @@ settings:
     analytics: ""
     analyticsClaim: ""
   model:
+    # Explicit connection: anthropic or anthropic_google_cloud.
+    provider: ""
+    googleCloud:
+      project: ""
+      workspaceId: ""
+      # Secret with a GOOGLE_APPLICATION_CREDENTIALS key containing ADC JSON.
+      existingSecret: ""
     # e.g. claude-opus-5-5
     name: ""
     # low, medium, high, xhigh or max

@@ -75,6 +75,39 @@ def test_model_address_of_a_proxy_with_direct_egress_is_a_mistake(environment, m
     assert "secret" not in str(error.value)
 
 
+@pytest.mark.parametrize("name", ["MODEL_PROVIDER", "ANTHROPIC_API_KEY"])
+def test_direct_anthropic_requires_its_connection_settings(environment, monkeypatch, name):
+    monkeypatch.delenv(name)
+    with pytest.raises(ConfigurationError, match=name):
+        load_settings()
+
+
+@pytest.mark.parametrize("name", ["ANTHROPIC_GOOGLE_CLOUD_PROJECT", "ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID"])
+def test_google_cloud_requires_project_and_workspace(environment, monkeypatch, name):
+    monkeypatch.setenv("MODEL_PROVIDER", "anthropic_google_cloud")
+    monkeypatch.setenv("ANTHROPIC_GOOGLE_CLOUD_PROJECT", "test-project")
+    monkeypatch.setenv("ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID", "test-workspace")
+    monkeypatch.delenv(name)
+    with pytest.raises(ConfigurationError, match=name):
+        load_settings()
+
+
+def test_google_cloud_does_not_use_the_anthropic_proxy(environment, monkeypatch):
+    monkeypatch.setenv("MODEL_PROVIDER", "anthropic_google_cloud")
+    monkeypatch.setenv("ANTHROPIC_GOOGLE_CLOUD_PROJECT", "test-project")
+    monkeypatch.setenv("ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID", "test-workspace")
+    monkeypatch.setenv("MODEL_EGRESS", "proxy")
+    monkeypatch.setenv("MODEL_PROXY_URL", "socks5://user:secret@proxy.test:1080")
+    with pytest.raises(ConfigurationError, match="MODEL_EGRESS"):
+        load_settings()
+
+
+def test_unknown_model_provider_is_not_replaced(environment, monkeypatch):
+    monkeypatch.setenv("MODEL_PROVIDER", "unknown")
+    with pytest.raises(ConfigurationError, match="MODEL_PROVIDER"):
+        load_settings()
+
+
 def test_the_escalation_role_is_required(environment, monkeypatch):
     monkeypatch.delenv("ROLE_ESCALATION")
     with pytest.raises(ConfigurationError, match="ROLE_ESCALATION"):

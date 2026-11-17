@@ -4,7 +4,7 @@ import base64
 from dataclasses import dataclass
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from anthropic import AsyncAnthropic, AsyncAnthropicGoogleCloud
 from anthropic.lib.tools import ToolError
 from loguru import logger
 
@@ -42,7 +42,7 @@ class CaseAgent:
 
     def __init__(
         self,
-        client: AsyncAnthropic,
+        client: AsyncAnthropic | AsyncAnthropicGoogleCloud,
         model: str,
         effort: str,
         token_budget: int,

@@ -54,6 +54,16 @@ imagePullSecrets:
   value: {{ required "settings.telegram.botUsername is required" $s.telegram.botUsername | quote }}
 - name: TELEGRAM_EGRESS
   value: {{ required "settings.telegram.egress is required: direct or proxy" $s.telegram.egress | quote }}
+- name: MODEL_PROVIDER
+  value: {{ required "settings.model.provider is required" $s.model.provider | quote }}
+{{- if eq $s.model.provider "anthropic_google_cloud" }}
+- name: ANTHROPIC_GOOGLE_CLOUD_PROJECT
+  value: {{ required "settings.model.googleCloud.project is required" $s.model.googleCloud.project | quote }}
+- name: ANTHROPIC_GOOGLE_CLOUD_WORKSPACE_ID
+  value: {{ required "settings.model.googleCloud.workspaceId is required" $s.model.googleCloud.workspaceId | quote }}
+- name: GOOGLE_APPLICATION_CREDENTIALS
+  value: /etc/gcp/key.json
+{{- end }}
 - name: MODEL_EGRESS
   value: {{ required "settings.model.egress is required: direct or proxy" $s.model.egress | quote }}
 - name: TELEGRAM_GROUPS
@@ -97,8 +107,11 @@ imagePullSecrets:
   value: {{ required "settings.database.name is required" $s.database.name | quote }}
 - name: DB_USER
   value: {{ required "settings.database.user is required" $s.database.user | quote }}
-{{- range list "TELEGRAM_BOT_TOKEN" "OIDC_CLIENT_SECRET" "ANTHROPIC_API_KEY" "ENCRYPTION_KEY" "DB_PASSWORD" }}
+{{- range list "TELEGRAM_BOT_TOKEN" "OIDC_CLIENT_SECRET" "ENCRYPTION_KEY" "DB_PASSWORD" }}
 {{ include "assistant.secretEnv" (dict "root" $ "name" .) }}
+{{- end }}
+{{- if eq $s.model.provider "anthropic" }}
+{{ include "assistant.secretEnv" (dict "root" $ "name" "ANTHROPIC_API_KEY") }}
 {{- end }}
 {{- if eq $s.telegram.egress "proxy" }}
 {{ include "assistant.secretEnv" (dict "root" $ "name" "TELEGRAM_PROXY_URL") }}
